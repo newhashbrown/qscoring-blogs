@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Detecting Credit Card Fraud: When 99.8% Accuracy Means Your Model Caught Nothing | QScoring</title>
+  <meta name="description" content="We trained two fraud detection models on 284,807 European card transactions. ROC AUC said one model was better. PR-AUC said the opposite. With 0.17% fraud rate, only one of those metrics tells the truth.">
+  <meta name="author" content="QScoring Research">
+  <meta name="robots" content="index,follow,max-image-preview:large">
+  <link rel="canonical" href="https://qscoring.com/blog/detecting-credit-card-fraud">
+
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Detecting Credit Card Fraud: When 99.8% Accuracy Means Your Model Caught Nothing">
+  <meta property="og:description" content="284,807 transactions. 0.17% fraud. Why ROC AUC misleads — and which metric a fraud team should actually optimize.">
+  <meta property="og:url" content="https://qscoring.com/blog/detecting-credit-card-fraud">
+  <meta property="og:site_name" content="QScoring">
+  <meta property="og:image" content="https://qscoring.com/blog/detecting-credit-card-fraud/fraud_roc_vs_pr.png">
+  <meta property="article:published_time" content="2026-05-21T00:00:00Z">
+  <meta property="article:section" content="Quantitative Research">
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Detecting Credit Card Fraud: When 99.8% Accuracy Means Your Model Caught Nothing">
+  <meta name="twitter:description" content="284,807 transactions. 0.17% fraud. Why ROC AUC misleads.">
+  <meta name="twitter:image" content="https://qscoring.com/blog/detecting-credit-card-fraud/fraud_roc_vs_pr.png">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "Detecting Credit Card Fraud: When 99.8% Accuracy Means Your Model Caught Nothing",
+    "description": "A walkthrough of credit card fraud detection on 284,807 European cardholder transactions, with a focus on why ROC AUC misleads at extreme class imbalance and what PR-AUC reveals instead.",
+    "image": "https://qscoring.com/blog/detecting-credit-card-fraud/fraud_roc_vs_pr.png",
+    "datePublished": "2026-05-21",
+    "dateModified": "2026-05-21",
+    "author": { "@type": "Organization", "name": "QScoring Research" },
+    "publisher": {
+      "@type": "Organization",
+      "name": "QScoring",
+      "url": "https://qscoring.com",
+      "logo": { "@type": "ImageObject", "url": "https://qscoring.com/logo.svg" }
+    },
+    "mainEntityOfPage": { "@type": "WebPage", "@id": "https://qscoring.com/blog/detecting-credit-card-fraud" }
+  }
+  </script>
+
+  <link rel="preconnect" href="https://rsms.me/">
+  <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+
+  <style>
+    :root {
+      --navy:        #0F172A;
+      --ink:         #1E293B;
+      --slate:       #334155;
+      --muted:       #64748B;
+      --line:        #E2E8F0;
+      --soft:        #F8FAFC;
+      --soft-2:      #F1F5F9;
+      --accent:      #0891B2;
+      --accent-dark: #0E7490;
+      --safe:        #059669;
+      --danger:      #DC2626;
+      --paper:       #FFFFFF;
+      --content-max: 720px;
+      --wide-max:   1080px;
+      --text-base: clamp(1.02rem, 0.96rem + 0.3vw, 1.13rem);
+      --text-lg:   clamp(1.18rem, 1.06rem + 0.5vw, 1.32rem);
+      --text-2xl:  clamp(1.8rem, 1.4rem + 1.6vw, 2.4rem);
+      --text-hero: clamp(2.4rem, 1.6rem + 3.4vw, 4.2rem);
+      --space-section: clamp(3.5rem, 2rem + 4vw, 6rem);
+      --radius:    14px;
+      --radius-lg: 22px;
+      --shadow:    0 6px 28px -10px rgba(15,23,42,0.18), 0 2px 6px rgba(15,23,42,0.05);
+      --shadow-lg: 0 30px 60px -30px rgba(15,23,42,0.35), 0 6px 16px -8px rgba(15,23,42,0.12);
+      --ease: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body { margin: 0; background: var(--paper); color: var(--ink);
+      font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+      font-feature-settings: 'cv11', 'ss01', 'ss03';
+      font-size: var(--text-base); line-height: 1.65;
+      -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+    a { color: var(--accent); text-decoration: none; transition: color 150ms var(--ease); }
+    a:hover { color: var(--accent-dark); text-decoration: underline; text-underline-offset: 3px; }
+
+    header.site { position: sticky; top: 0; z-index: 30;
+      background: rgba(255,255,255,0.85);
+      backdrop-filter: saturate(180%) blur(14px);
+      -webkit-backdrop-filter: saturate(180%) blur(14px);
+      border-bottom: 1px solid var(--line); }
+    .site-inner { max-width: var(--wide-max); margin: 0 auto; padding: 14px 28px;
+      display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+    .logo { display: inline-flex; align-items: center; gap: 10px; color: var(--navy);
+      font-weight: 700; letter-spacing: -0.02em; font-size: 1.06rem; }
+    .logo-mark { width: 30px; height: 30px; border-radius: 8px;
+      background: linear-gradient(135deg, #0F172A 0%, #0891B2 100%);
+      display: grid; place-items: center; color: #fff; font-weight: 800;
+      font-size: 0.9rem; letter-spacing: -0.04em;
+      box-shadow: 0 4px 14px -4px rgba(8,145,178,0.55); }
+    nav.site-nav { display: flex; gap: 26px; font-size: 0.94rem; color: var(--slate); }
+    nav.site-nav a { color: var(--slate); }
+    nav.site-nav a:hover { color: var(--navy); text-decoration: none; }
+    .cta { display: inline-flex; align-items: center; gap: 8px;
+      padding: 9px 16px; border-radius: 999px;
+      background: var(--navy); color: #fff !important;
+      font-weight: 600; font-size: 0.92rem;
+      transition: transform 180ms var(--ease), background 180ms var(--ease); }
+    .cta:hover { background: var(--accent); transform: translateY(-1px); text-decoration: none; }
+    @media (max-width: 720px) { nav.site-nav { display: none; } }
+
+    .hero { max-width: var(--wide-max); margin: 0 auto; padding: clamp(3rem, 2rem + 4vw, 6rem) 28px 2rem; }
+    .eyebrow { display: inline-flex; align-items: center; gap: 10px;
+      font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.16em;
+      color: var(--accent); font-weight: 600; }
+    .eyebrow::before { content: ""; width: 28px; height: 1px; background: var(--accent); }
+    h1.hero-title { margin: 18px 0 18px;
+      font-size: var(--text-hero); line-height: 1.04;
+      letter-spacing: -0.035em; color: var(--navy);
+      font-weight: 800; max-width: 20ch; }
+    h1.hero-title .accent { color: var(--accent); }
+    .deck { max-width: 60ch; font-size: var(--text-lg);
+      color: var(--slate); line-height: 1.5; }
+    .byline { margin-top: 36px; display: flex; align-items: center; gap: 14px;
+      font-size: 0.92rem; color: var(--muted); }
+    .byline .dot { width: 4px; height: 4px; border-radius: 50%; background: var(--muted); }
+    .byline strong { color: var(--ink); font-weight: 600; }
+
+    .stats { max-width: var(--wide-max); margin: 2.5rem auto 0; padding: 0 28px;
+      display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+    .stat { padding: 22px 22px; border-radius: var(--radius);
+      background: var(--soft); border: 1px solid var(--line);
+      transition: transform 200ms var(--ease), box-shadow 200ms var(--ease), border-color 200ms var(--ease); }
+    .stat:hover { transform: translateY(-2px); box-shadow: var(--shadow); border-color: #CBD5E1; }
+    .stat .num { font-size: clamp(1.7rem, 1.2rem + 1.4vw, 2.4rem); font-weight: 800;
+      color: var(--navy); letter-spacing: -0.03em; line-height: 1; }
+    .stat .label { margin-top: 8px; font-size: 0.86rem; color: var(--muted); line-height: 1.4; }
+    @media (max-width: 720px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+
+    main.article { max-width: var(--content-max); margin: 0 auto; padding: var(--space-section) 28px 4rem; }
+    main.article > * + * { margin-top: 1.1em; }
+    main.article h2 { margin: 3.4rem 0 1rem; font-size: var(--text-2xl);
+      color: var(--navy); letter-spacing: -0.025em; line-height: 1.15; font-weight: 800; }
+    main.article h2::before { content: ""; display: block; width: 44px; height: 3px;
+      background: var(--accent); margin-bottom: 18px; border-radius: 2px; }
+    main.article p { color: var(--ink); }
+    main.article p code, main.article li code {
+      background: var(--soft-2); color: var(--accent-dark);
+      padding: 2px 6px; border-radius: 5px; font-size: 0.9em;
+      font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace; }
+    main.article strong { color: var(--navy); font-weight: 700; }
+    main.article ul { padding-left: 1.3rem; }
+    main.article li + li { margin-top: 0.4em; }
+
+    .pull { margin: 2.8rem 0; padding: 1.6rem 0 1.6rem 1.8rem;
+      border-left: 3px solid var(--accent);
+      font-size: clamp(1.15rem, 0.9rem + 1vw, 1.5rem);
+      line-height: 1.4; color: var(--navy); font-weight: 600;
+      letter-spacing: -0.015em; }
+
+    figure.chart { margin: 2.6rem -28px; background: var(--paper); }
+    figure.chart .chart-card { border-radius: var(--radius-lg);
+      border: 1px solid var(--line);
+      background: radial-gradient(120% 80% at 0% 0%, rgba(8,145,178,0.05), transparent 60%), var(--paper);
+      padding: 26px 26px 18px; box-shadow: var(--shadow); }
+    figure.chart img { display: block; width: 100%; height: auto; border-radius: 10px; }
+    figure.chart figcaption { margin-top: 14px; font-size: 0.88rem;
+      color: var(--muted); line-height: 1.5; }
+    figure.chart figcaption strong { color: var(--ink); font-weight: 600; }
+    @media (min-width: 900px) { figure.chart { margin: 3rem -120px; } }
+
+    .callout { margin: 2.4rem 0; padding: 22px 24px;
+      background: linear-gradient(135deg, rgba(8,145,178,0.06), rgba(8,145,178,0.02));
+      border: 1px solid rgba(8,145,178,0.18); border-radius: var(--radius);
+      font-size: 0.97rem; color: var(--slate); }
+    .callout .title { display: flex; align-items: center; gap: 10px;
+      font-weight: 700; color: var(--navy);
+      margin-bottom: 6px; font-size: 0.95rem; letter-spacing: 0.01em; }
+    .callout .title .badge { font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase;
+      padding: 3px 8px; background: var(--accent); color: #fff;
+      border-radius: 4px; font-weight: 700; }
+
+    .metrics-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 2rem 0 1.4rem; }
+    .metric { padding: 18px 18px; border-radius: var(--radius); background: var(--navy); color: #fff; }
+    .metric .v { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; }
+    .metric .k { margin-top: 6px; font-size: 0.78rem; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255,255,255,0.7); }
+    @media (max-width: 600px) { .metrics-grid { grid-template-columns: repeat(2, 1fr); } }
+
+    .cta-card { margin: 4rem -28px 0; padding: 38px 32px;
+      border-radius: var(--radius-lg);
+      background: radial-gradient(70% 100% at 100% 0%, rgba(8,145,178,0.55) 0%, rgba(15,23,42,0) 60%),
+        linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+      color: #fff; box-shadow: var(--shadow-lg); position: relative; overflow: hidden; }
+    .cta-card::after { content: ""; position: absolute; inset: auto -40px -60px auto;
+      width: 220px; height: 220px;
+      background: radial-gradient(closest-side, rgba(8,145,178,0.35), transparent 70%);
+      pointer-events: none; }
+    .cta-card h3 { margin: 0 0 8px; color: #fff;
+      font-size: clamp(1.4rem, 1.1rem + 1vw, 1.9rem);
+      letter-spacing: -0.02em; line-height: 1.2; font-weight: 800; }
+    .cta-card p { margin: 0 0 22px; color: rgba(255,255,255,0.78); max-width: 56ch; }
+    .cta-card .cta { background: var(--accent); color: #fff !important; }
+    .cta-card .cta:hover { background: #22D3EE; color: var(--navy) !important; }
+    @media (min-width: 900px) { .cta-card { margin: 4rem -120px 0; } }
+
+    footer.site { margin-top: 4rem; padding: 36px 28px 56px; border-top: 1px solid var(--line); background: var(--soft); }
+    .footer-inner { max-width: var(--wide-max); margin: 0 auto; display: flex; flex-wrap: wrap; gap: 18px; justify-content: space-between; font-size: 0.88rem; color: var(--muted); }
+    .footer-inner a { color: var(--slate); }
+    .meta-foot { margin-top: 18px; max-width: var(--content-max); padding: 0 28px; margin-left: auto; margin-right: auto; font-size: 0.82rem; color: var(--muted); line-height: 1.6; }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; } }
+  </style>
+</head>
+<body>
+
+<header class="site">
+  <div class="site-inner">
+    <a class="logo" href="https://qscoring.com">
+      <span class="logo-mark">Q</span>
+      <span>QScoring</span>
+    </a>
+    <nav class="site-nav" aria-label="Primary">
+      <a href="https://qscoring.com/research">Research</a>
+      <a href="https://qscoring.com/blog">Blog</a>
+      <a href="https://qscoring.com/methodology">Methodology</a>
+      <a href="https://qscoring.com/pricing">Pricing</a>
+    </nav>
+    <a class="cta" href="https://qscoring.com/signup">Try QScoring &rarr;</a>
+  </div>
+</header>
+
+<section class="hero">
+  <span class="eyebrow">Quantitative Research</span>
+  <h1 class="hero-title">Detecting credit card fraud: when <span class="accent">99.8% accuracy</span> means your model caught nothing.</h1>
+  <p class="deck">
+    A model that predicts &ldquo;not fraud&rdquo; for every single transaction is right 99.83% of the time on this dataset. That&apos;s exactly as useful as it sounds. We trained two real fraud models on 284,807 European card transactions and looked at what metric actually tells the truth.
+  </p>
+  <div class="byline">
+    <span><strong>QScoring Research</strong></span>
+    <span class="dot"></span>
+    <span>May 21, 2026</span>
+    <span class="dot"></span>
+    <span>14 min read</span>
+  </div>
+</section>
+
+<section class="stats" aria-label="Headline statistics">
+  <div class="stat">
+    <div class="num">284,807</div>
+    <div class="label">Transactions in the 48-hour window</div>
+  </div>
+  <div class="stat">
+    <div class="num">0.173%</div>
+    <div class="label">Fraud rate (492 transactions)</div>
+  </div>
+  <div class="stat">
+    <div class="num">0.824</div>
+    <div class="label">Best PR-AUC achieved (random forest)</div>
+  </div>
+  <div class="stat">
+    <div class="num">87%</div>
+    <div class="label">Of fraud caught by reviewing the top 1% of flagged transactions</div>
+  </div>
+</section>
+
+<main class="article">
+
+  <p>Every introductory machine-learning class teaches accuracy and ROC AUC as the headline metrics for binary classification. Most of those classes also use balanced datasets where those metrics work reasonably well — cancer/no-cancer split 50/50, churn/no-churn split 30/70, that kind of thing.</p>
+
+  <p>Real-world fraud detection is not that. The fraud rate on this Kaggle dataset is <strong>0.173%</strong> — about one in 578 transactions. At that level of imbalance, the metric you choose decides whether your fraud team thinks the model is a success or a failure. We&apos;re going to show why.</p>
+
+  <p>The data: <a href="https://www.kaggle.com/datasets/mlg-ulb/creditcardfraud">mlg-ulb/creditcardfraud</a>, a publicly available dataset of <strong>284,807 European cardholder transactions</strong> across a 48-hour window in September 2013. Of those, 492 are confirmed fraud. The features are anonymized — 28 of the 30 columns are PCA-transformed for privacy (labeled V1 through V28), with only <code>Time</code> and <code>Amount</code> kept in their original form.</p>
+
+  <p>That&apos;s a more interesting setup than it sounds. We can&apos;t lean on the columns being &ldquo;income&rdquo; or &ldquo;loan grade.&rdquo; The model has to find signal in features it can&apos;t name. Which makes this a particularly clean test of where the signal actually lives — and which metric is reading it correctly.</p>
+
+  <h2>1. The class imbalance is what eats your metrics</h2>
+
+  <figure class="chart">
+    <div class="chart-card">
+      <img src="../assets/fraud_class_imbalance.png" alt="Stacked horizontal bar showing 284,315 legitimate transactions and only 492 fraud cases — fraud is barely visible">
+      <figcaption><strong>Figure 1.</strong> 284,315 legitimate transactions, 492 fraud cases. If you predicted &ldquo;legitimate&rdquo; for every transaction in this dataset, you&apos;d be wrong 492 times out of 284,807 — an <strong>accuracy of 99.83%</strong>. That number sounds like a win. It catches zero fraud.</figcaption>
+    </div>
+  </figure>
+
+  <p>This is the imbalance trap. When the rare class is what matters, the metric you reach for first — overall accuracy — is dominated by the easy class. A model that simply predicts &ldquo;legitimate&rdquo; for every single transaction beats almost any naive predictor at &ldquo;accuracy.&rdquo; The number looks great. The customers losing money to fraud see no benefit.</p>
+
+  <p>The same problem leaks into the next metric most teams reach for: ROC AUC. We&apos;ll get to that one in a minute.</p>
+
+  <h2>2. Where the fraud actually lives</h2>
+
+  <p>Before we train any models, two things from the raw data are worth flagging — both because they&apos;re counterintuitive and because they shape the modeling choices later.</p>
+
+  <p><strong>First, fraud has a time-of-day pattern.</strong> The dataset spans 48 hours, and if we treat transaction time modulo 24 hours as a rough &ldquo;hour of day,&rdquo; fraud rate isn&apos;t constant:</p>
+
+  <figure class="chart">
+    <div class="chart-card">
+      <img src="../assets/fraud_by_hour.png" alt="Bar chart of fraud rate by hour-of-day showing elevated rates between 2am and 6am">
+      <figcaption><strong>Figure 2.</strong> Fraud rate by hour-of-day. The overnight window (2am–6am local) shows rates up to 4&times; the overall baseline — when card-not-present fraud rings prefer to operate because human review queues are thinner and customers are asleep and slower to notice charges.</figcaption>
+    </div>
+  </figure>
+
+  <p><strong>Second, fraud amounts are smaller than legitimate ones — at the median.</strong> This one surprises people:</p>
+
+  <figure class="chart">
+    <div class="chart-card">
+      <img src="../assets/fraud_amount_distribution.png" alt="Histogram of transaction amounts on log scale showing fraud distribution skewed toward smaller amounts compared to legitimate transactions">
+      <figcaption><strong>Figure 3.</strong> Transaction amount distribution (log-x scale). Median legitimate transaction: <strong>$22.00</strong>. Median fraud transaction: <strong>$9.25</strong>. The intuition that &ldquo;fraud is big-ticket purchases&rdquo; is wrong on this dataset — the most common fraud pattern is small-dollar card-testing transactions where the attacker validates that a stolen card works before attempting larger charges.</figcaption>
+    </div>
+  </figure>
+
+  <p>The mean tells a different story (fraud mean is $122 vs $88 for legit — a few huge fraud transactions pull the average up), which is why looking at distributions matters. Means lie under fat tails. So do single-threshold &ldquo;flag if amount &gt; X&rdquo; rules.</p>
+
+  <h2>3. Training two models</h2>
+
+  <p>Same two model families as our previous posts on <a href="how-credit-scoring-models-actually-work.html">credit-risk modeling</a> and <a href="predicting-loan-defaults.html">loan default prediction</a>: <strong>logistic regression</strong> (linear, regulator-friendly) and <strong>random forest</strong> (non-linear ensemble). Both trained with <code>class_weight=balanced</code> on a 70/30 stratified split. Test set: 85,443 transactions, 148 of them fraud.</p>
+
+  <p>The headline numbers:</p>
+
+  <div class="metrics-grid">
+    <div class="metric"><div class="v">LR&nbsp;0.968<br>RF&nbsp;0.949</div><div class="k">ROC AUC</div></div>
+    <div class="metric"><div class="v">LR&nbsp;0.705<br>RF&nbsp;0.824</div><div class="k">PR-AUC</div></div>
+    <div class="metric"><div class="v">LR&nbsp;6.7%<br>RF&nbsp;96.5%</div><div class="k">Precision @ 0.5</div></div>
+    <div class="metric"><div class="v">LR&nbsp;87.8%<br>RF&nbsp;73.6%</div><div class="k">Recall @ 0.5</div></div>
+  </div>
+
+  <p>Read those carefully. The two models are doing <em>very different things</em>, and the headline summary metric you pick decides which one looks better.</p>
+
+  <h2>4. ROC AUC vs. PR-AUC — the chart that explains everything</h2>
+
+  <p>The single most important plot in this post:</p>
+
+  <figure class="chart">
+    <div class="chart-card">
+      <img src="../assets/fraud_roc_vs_pr.png" alt="Two panels: ROC curves on the left showing both models near top-left corner, PR curves on the right showing the random forest meaningfully higher than logistic regression">
+      <figcaption><strong>Figure 4.</strong> Same two models, two metrics. <strong>Left (ROC):</strong> both curves hug the upper-left corner. LR&apos;s AUC is 0.968, RF&apos;s is 0.949 — LR looks <em>better</em>. <strong>Right (PR):</strong> RF clearly dominates. RF&apos;s PR-AUC is 0.824 vs LR&apos;s 0.705. Different stories, same models, same data.</figcaption>
+    </div>
+  </figure>
+
+  <p>This is the lesson. The two AUC metrics disagree because they answer different questions:</p>
+
+  <ul>
+    <li><strong>ROC AUC</strong> asks: &ldquo;for a randomly chosen fraud and a randomly chosen non-fraud, how often does the model rank the fraud higher?&rdquo; The answer is dominated by the model&apos;s behavior on the easy 99.83% of legitimate transactions. Both models get easy negatives right; the score barely sees their disagreement on the hard positives.</li>
+    <li><strong>PR-AUC</strong> asks: &ldquo;as you walk down the model&apos;s ranking from most-suspicious to least, how well does precision hold up?&rdquo; This is dominated entirely by behavior on the 0.17% of positives — which is the actual operating region for a fraud team.</li>
+  </ul>
+
+  <p>At extreme class imbalance, ROC AUC saturates near 1.0 for any model that gets the easy stuff right. The difference between &ldquo;0.95 ROC AUC&rdquo; and &ldquo;0.97 ROC AUC&rdquo; sounds tiny but can hide a 2&times; difference in how many false alarms your analysts wade through to find the same number of real frauds.</p>
+
+  <div class="callout">
+    <div class="title"><span class="badge">Rule of thumb</span> When to switch to PR-AUC</div>
+    If the positive class is below ~5% of your data — fraud, rare disease screening, ad clicks, churn at sub-monthly intervals — make PR-AUC your headline metric. ROC AUC stays in the deck as a sanity check, but the optimization target should be PR-AUC or a directly operational quantity like recall-at-fixed-FPR or precision-at-top-K. Treat any team that ships a fraud model with ROC AUC as the only quoted metric with healthy skepticism.
+  </div>
+
+  <h2>5. The threshold matters more than the algorithm</h2>
+
+  <p>Both models output a probability between 0 and 1. The default is to flag anything above 0.5 as fraud. With class imbalance this severe, that&apos;s rarely the right cutoff.</p>
+
+  <figure class="chart">
+    <div class="chart-card">
+      <img src="../assets/fraud_confusion_matrices.png" alt="Two confusion matrices for random forest: at threshold 0.5 showing high precision and lower recall, at top-0.5% threshold showing more captured frauds but more false positives">
+      <figcaption><strong>Figure 5.</strong> Same random forest, two thresholds. <strong>Left (default 0.5):</strong> precision is 96.5%, recall is 73.6% — only 41 false alarms in 85,443 transactions, but 39 actual frauds missed. <strong>Right (top-0.5% threshold):</strong> precision drops to 29.4%, but recall rises to 85.1% — the model now catches 126 of 148 frauds at the cost of 302 false positives the analysts will review.</figcaption>
+    </div>
+  </figure>
+
+  <p>Which one is &ldquo;better&rdquo; depends entirely on the fraud team&apos;s operational budget. If they can review 300 transactions per day, the top-0.5% threshold catches more fraud. If they can only review 50 per day, the high-precision threshold is the right cut. The model didn&apos;t change — only the operating point did.</p>
+
+  <div class="pull">
+    The threshold is a product decision, not a modeling one.
+  </div>
+
+  <h2>6. The operational view: cumulative gains</h2>
+
+  <p>For a fraud team, the metric they actually care about is roughly: <em>if I have capacity to review the top X% of flagged transactions, what fraction of fraud will I catch?</em> That&apos;s a <strong>cumulative gains curve</strong>:</p>
+
+  <figure class="chart">
+    <div class="chart-card">
+      <img src="../assets/fraud_cumulative_gains.png" alt="Cumulative gains curve showing that reviewing the top 1% of transactions ranked by random forest risk catches ~87% of fraud">
+      <figcaption><strong>Figure 6.</strong> Cumulative gains. Reviewing the top 1% of model-flagged transactions catches <strong>87% of fraud with the random forest</strong> and 86% with logistic regression. By 5%, both models are over 90%. The diagonal is what you&apos;d get reviewing transactions at random.</figcaption>
+    </div>
+  </figure>
+
+  <p>This is the chart you want in front of a fraud-ops director. &ldquo;Give me a budget to review 1% of transactions and I&apos;ll catch 87% of your fraud&rdquo; is a defensible business case. &ldquo;My model has 0.96 ROC AUC&rdquo; is not.</p>
+
+  <h2>7. What the random forest found in anonymized features</h2>
+
+  <p>Even though V1–V28 are PCA components and have no human-readable names, the random forest&apos;s importance ranking tells us how concentrated the fraud signal is across them:</p>
+
+  <figure class="chart">
+    <div class="chart-card">
+      <img src="../assets/fraud_feature_importance.png" alt="Horizontal bar chart of top 12 random forest feature importances showing V17, V14, V12, V10 dominating with importance over 0.10 each">
+      <figcaption><strong>Figure 7.</strong> Random forest feature importance, top 12. Unlike the loan-default dataset where importance was uniformly distributed across 30 weak features, here a handful of PCA components — V17, V14, V12, V10 — carry most of the signal. The fraud features were anonymized, but they&apos;re anonymized in a way that preserves enough variance for the model to discriminate.</figcaption>
+    </div>
+  </figure>
+
+  <p>This is what &ldquo;a model is finding something&rdquo; looks like in feature-importance terms: a few features doing most of the work, with a long tail of marginal contributors. Compare that to our <a href="predicting-loan-defaults.html">loan-default post</a>, where the top feature&apos;s importance was barely above the bottom feature&apos;s — that was the signature of a model grasping at noise.</p>
+
+  <h2>8. What this means for equity scoring</h2>
+
+  <p>QScoring scores equities, not fraud, but the metric-choice question rhymes. Single-stock scoring is also an imbalanced ranking problem: the genuine breakouts and breakdowns over the next quarter are the rare events; most stocks drift along sector-and-market beta. The wrong evaluation metric makes everything look like it&apos;s working.</p>
+
+  <ul>
+    <li><strong>Headline R² against forward returns</strong> is the equity-research equivalent of accuracy. It&apos;s dominated by the boring middle, where most stocks live. A score with high R² can still miss the rare moves that actually pay.</li>
+    <li><strong>Information coefficient (IC)</strong>, the Spearman correlation between score and forward return, is partway better — it&apos;s rank-based, so the middle dominates less.</li>
+    <li><strong>Top-decile vs bottom-decile spread</strong>, sometimes called the quintile spread, is the operational metric. &ldquo;If I buy the stocks the score ranks in the top 10% and short the bottom 10%, what&apos;s the annualized return spread?&rdquo; That&apos;s the equity equivalent of <em>precision-at-top-K</em>. It&apos;s what we publish on the <a href="https://qscoring.com/methodology">methodology page</a> and what we&apos;d argue is the only metric worth reading from any equity score.</li>
+  </ul>
+
+  <p>If you only remember one thing from this post: <strong>the metric you optimize is the metric you get. Choose accordingly.</strong></p>
+
+  <div class="cta-card">
+    <h3>See the same discipline applied to stocks.</h3>
+    <p>QScoring rates every U.S.-listed equity using vetted features and operationally-meaningful evaluation metrics — no black-box models, no vanity numbers. Browse the universe or score any ticker free.</p>
+    <a class="cta" href="https://qscoring.com/signup">Open a free account &rarr;</a>
+  </div>
+
+</main>
+
+<aside class="meta-foot">
+  <p><strong>Reproducibility.</strong> All analysis in this post is reproducible from <code>analysis/credit_card_fraud_detection.py</code> using the publicly available <a href="https://www.kaggle.com/datasets/mlg-ulb/creditcardfraud">mlg-ulb/creditcardfraud</a> dataset from Kaggle. Models trained with scikit-learn 1.8.0 on Python 3.13. Train/test split and random forest are seeded (<code>random_state=42</code>) for exact reproduction.</p>
+  <p><strong>Threshold note.</strong> The &ldquo;top 0.5% threshold&rdquo; for the second confusion matrix is set so that exactly the top 0.5% of test transactions by model probability are flagged as fraud — a reasonable proxy for a real fraud team&apos;s review queue capacity. The exact number is a product choice and would be tuned on a per-team basis.</p>
+  <p><strong>Disclosures.</strong> This article is for educational purposes. The dataset is anonymized public Kaggle data — no real cardholder information is referenced or recoverable. QScoring&apos;s commercial products score publicly traded securities, not financial transactions.</p>
+</aside>
+
+<footer class="site">
+  <div class="footer-inner">
+    <div>&copy; 2026 QScoring &middot; Quantitative research for individual investors</div>
+    <div>
+      <a href="https://qscoring.com/methodology">Methodology</a> &middot;
+      <a href="https://qscoring.com/blog">Blog</a> &middot;
+      <a href="https://qscoring.com/contact">Contact</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

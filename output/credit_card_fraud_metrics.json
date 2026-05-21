@@ -1,0 +1,89 @@
+{
+  "n_total": 284807,
+  "n_fraud": 492,
+  "fraud_rate_pct": 0.1727,
+  "trivial_classifier_accuracy_pct": 99.8273,
+  "amount_summary": {
+    "median_legit": 22.0,
+    "median_fraud": 9.25,
+    "mean_legit": 88.29,
+    "mean_fraud": 122.21
+  },
+  "n_test": 85443,
+  "n_test_fraud": 148,
+  "models": {
+    "logistic_regression": {
+      "roc_auc": 0.9681,
+      "pr_auc": 0.705,
+      "accuracy_at_0_5": 0.9786,
+      "precision_at_0_5": 0.0671,
+      "recall_at_0_5": 0.8784,
+      "f1_at_0_5": 0.1247,
+      "precision_at_top_0_5pct": 0.2874,
+      "recall_at_top_0_5pct": 0.8311,
+      "recall_at_top_1pct": 0.8581,
+      "recall_at_top_5pct": 0.8986
+    },
+    "random_forest": {
+      "roc_auc": 0.9493,
+      "pr_auc": 0.824,
+      "accuracy_at_0_5": 0.9995,
+      "precision_at_0_5": 0.9646,
+      "recall_at_0_5": 0.7365,
+      "f1_at_0_5": 0.8352,
+      "precision_at_top_0_5pct": 0.2937,
+      "recall_at_top_0_5pct": 0.8514,
+      "recall_at_top_1pct": 0.8716,
+      "recall_at_top_5pct": 0.9054,
+      "confusion_at_0_5": {
+        "tn": 85291,
+        "fp": 4,
+        "fn": 39,
+        "tp": 109
+      },
+      "threshold_top_0_5pct": 0.02
+    }
+  },
+  "rf_top_features": [
+    {
+      "feature": "V14",
+      "importance": 0.1809
+    },
+    {
+      "feature": "V4",
+      "importance": 0.1276
+    },
+    {
+      "feature": "V10",
+      "importance": 0.1135
+    },
+    {
+      "feature": "V12",
+      "importance": 0.0982
+    },
+    {
+      "feature": "V17",
+      "importance": 0.0925
+    },
+    {
+      "feature": "V3",
+      "importance": 0.0609
+    },
+    {
+      "feature": "V16",
+      "importance": 0.0566
+    },
+    {
+      "feature": "V11",
+      "importance": 0.0503
+    },
+    {
+      "feature": "V2",
+      "importance": 0.0302
+    },
+    {
+      "feature": "V7",
+      "importance": 0.0198
+    }
+  ]
+}
