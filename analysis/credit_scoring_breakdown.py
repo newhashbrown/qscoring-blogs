@@ -11,6 +11,7 @@ Outputs:
 
 from __future__ import annotations
 
+import argparse
 import json
 from pathlib import Path
 
@@ -33,24 +34,69 @@ from sklearn.preprocessing import StandardScaler
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA_PATH = ROOT / "datasets" / "credit_risk_dataset.csv"
-ASSETS = ROOT / "assets"
-OUTPUT = ROOT / "output"
-ASSETS.mkdir(exist_ok=True)
-OUTPUT.mkdir(exist_ok=True)
 
-NAVY = "#0F172A"
-INK = "#1E293B"
-MUTED = "#64748B"
-ACCENT = "#2563EB"
-DANGER = "#DC2626"
-SAFE = "#059669"
-BG = "#FFFFFF"
+parser = argparse.ArgumentParser(description="Credit scoring blog analysis")
+parser.add_argument("--theme", choices=["light", "dark"], default="light")
+parser.add_argument("--out-charts", type=str, default=None,
+                    help="Override chart output dir (default: ./assets for light, ignored otherwise)")
+parser.add_argument("--out-data", type=str, default=None,
+                    help="Override metrics.json output dir (default: ./output)")
+args = parser.parse_args()
+
+if args.theme == "dark":
+    PALETTE = {
+        "bg":      "#0A0E17",   # qscoring --bg
+        "bg_card": "#141c2e",   # qscoring --bg-card
+        "title":   "#F8FAFC",   # --text
+        "text":    "#CBD5E1",   # --text-dim
+        "muted":   "#778999",   # --text-muted
+        "accent":  "#34D399",   # --signal-buy (green)
+        "gold":    "#FBBF24",   # --gold-bright
+        "danger":  "#F87171",   # --signal-short
+        "grid":    "rgba(203,213,225,0.10)",
+        "spine":   "#2B3548",
+    }
+    default_charts_dir = ROOT / "assets-dark"
+else:
+    PALETTE = {
+        "bg":      "#FFFFFF",
+        "bg_card": "#FFFFFF",
+        "title":   "#0F172A",
+        "text":    "#1E293B",
+        "muted":   "#64748B",
+        "accent":  "#2563EB",
+        "gold":    "#F59E0B",
+        "danger":  "#DC2626",
+        "grid":    "#E2E8F0",
+        "spine":   "#64748B",
+    }
+    default_charts_dir = ROOT / "assets"
+
+ASSETS = Path(args.out_charts) if args.out_charts else default_charts_dir
+OUTPUT = Path(args.out_data) if args.out_data else ROOT / "output"
+ASSETS.mkdir(parents=True, exist_ok=True)
+OUTPUT.mkdir(parents=True, exist_ok=True)
+
+# Legacy aliases used throughout the chart code
+NAVY = PALETTE["title"]
+INK = PALETTE["text"]
+MUTED = PALETTE["muted"]
+ACCENT = PALETTE["accent"]
+DANGER = PALETTE["danger"]
+SAFE = PALETTE["accent"]  # in dark theme, "safe" = accent green
+BG = PALETTE["bg"]
+
+# In dark theme, recolor SAFE distinctly from ACCENT so the grade chart still
+# uses three tiers. Reuse gold for the middle tier.
+SAFE_TIER = PALETTE["accent"]
+MID_TIER = PALETTE["gold"]
+HIGH_TIER = PALETTE["danger"]
 
 plt.rcParams.update(
     {
         "figure.facecolor": BG,
         "axes.facecolor": BG,
-        "axes.edgecolor": MUTED,
+        "axes.edgecolor": PALETTE["spine"],
         "axes.labelcolor": INK,
         "axes.titlecolor": NAVY,
         "axes.titleweight": "bold",
@@ -75,7 +121,11 @@ def save_fig(fig: plt.Figure, name: str) -> None:
     out = ASSETS / name
     fig.savefig(out)
     plt.close(fig)
-    print(f"  wrote {out.relative_to(ROOT)}")
+    try:
+        rel = out.relative_to(ROOT)
+    except ValueError:
+        rel = out
+    print(f"  wrote {rel}")
 
 
 # ---------------------------------------------------------------------------
@@ -125,8 +175,8 @@ by_grade = (
 )
 
 fig, ax = plt.subplots(figsize=(8.5, 4.5))
-colors = [SAFE if r < 0.15 else ACCENT if r < 0.35 else DANGER for r in by_grade["mean"]]
-bars = ax.bar(by_grade.index, by_grade["mean"] * 100, color=colors, edgecolor=NAVY, linewidth=0.6)
+colors = [SAFE_TIER if r < 0.15 else MID_TIER if r < 0.35 else HIGH_TIER for r in by_grade["mean"]]
+bars = ax.bar(by_grade.index, by_grade["mean"] * 100, color=colors, edgecolor=PALETTE["spine"], linewidth=0.6)
 for bar, n in zip(bars, by_grade["count"]):
     h = bar.get_height()
     ax.text(
@@ -160,7 +210,7 @@ by_home = (
 
 fig, ax = plt.subplots(figsize=(8.5, 4.5))
 bars = ax.barh(
-    by_home.index, by_home["mean"] * 100, color=ACCENT, edgecolor=NAVY, linewidth=0.6
+    by_home.index, by_home["mean"] * 100, color=ACCENT, edgecolor=PALETTE["spine"], linewidth=0.6
 )
 for bar, n in zip(bars, by_home["count"]):
     w = bar.get_width()
@@ -193,7 +243,7 @@ by_intent = (
 )
 
 fig, ax = plt.subplots(figsize=(8.5, 4.5))
-bars = ax.barh(by_intent.index, by_intent["mean"] * 100, color=NAVY, edgecolor=NAVY, linewidth=0.6)
+bars = ax.barh(by_intent.index, by_intent["mean"] * 100, color=NAVY, edgecolor=PALETTE["spine"], linewidth=0.6)
 for bar, n in zip(bars, by_intent["count"]):
     w = bar.get_width()
     ax.text(w + 0.4, bar.get_y() + bar.get_height() / 2, f"{w:.1f}%  (n={n:,})", va="center", fontsize=9, color=INK)
@@ -236,7 +286,7 @@ df["lti_bin"] = pd.cut(
 by_lti = df.groupby("lti_bin", observed=True)["loan_status"].agg(["mean", "count"])
 
 fig, ax = plt.subplots(figsize=(8.5, 4.5))
-bars = ax.bar(by_lti.index.astype(str), by_lti["mean"] * 100, color=ACCENT, edgecolor=NAVY, linewidth=0.6)
+bars = ax.bar(by_lti.index.astype(str), by_lti["mean"] * 100, color=ACCENT, edgecolor=PALETTE["spine"], linewidth=0.6)
 for bar, n in zip(bars, by_lti["count"]):
     h = bar.get_height()
     ax.text(bar.get_x() + bar.get_width() / 2, h + 1.5, f"{h:.0f}%\nn={n:,}", ha="center", va="bottom", fontsize=9, color=INK)
@@ -316,7 +366,7 @@ coef = pd.Series(model.coef_[0], index=X.columns).sort_values()
 top = pd.concat([coef.head(6), coef.tail(8)])
 fig, ax = plt.subplots(figsize=(8.5, 6))
 colors = [SAFE if v < 0 else DANGER for v in top.values]
-bars = ax.barh(top.index, top.values, color=colors, edgecolor=NAVY, linewidth=0.6)
+bars = ax.barh(top.index, top.values, color=colors, edgecolor=PALETTE["spine"], linewidth=0.6)
 ax.axvline(0, color=NAVY, linewidth=0.8)
 for bar, v in zip(bars, top.values):
     offset = 0.04 if v >= 0 else -0.04
@@ -337,18 +387,20 @@ fig, ax = plt.subplots(figsize=(6, 5))
 matrix = np.array([[tn, fp], [fn, tp]])
 labels = np.array([[f"True negatives\n{tn:,}", f"False positives\n{fp:,}"],
                    [f"False negatives\n{fn:,}", f"True positives\n{tp:,}"]])
+cm_cmap = "mako" if args.theme == "dark" else "Blues"
+cm_annot_color = "#F8FAFC" if args.theme == "dark" else NAVY
 sns.heatmap(
     matrix,
     annot=labels,
     fmt="",
-    cmap="Blues",
+    cmap=cm_cmap,
     cbar=False,
     linewidths=1,
     linecolor=BG,
     xticklabels=["Predicted repay", "Predicted default"],
     yticklabels=["Actual repay", "Actual default"],
     ax=ax,
-    annot_kws={"fontsize": 11, "color": NAVY, "weight": "bold"},
+    annot_kws={"fontsize": 11, "color": cm_annot_color, "weight": "bold"},
 )
 ax.set_title("Confusion matrix at default threshold (0.5)")
 save_fig(fig, "confusion_matrix.png")
