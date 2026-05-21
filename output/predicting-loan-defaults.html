@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Predicting Loan Defaults: What the Data Tells Us Banks Miss | QScoring</title>
+  <meta name="description" content="We trained two scoring models on 67,463 real loan applications. Every headline feature lenders publish — grade, home ownership, interest rate, verification — is statistically flat against default. Here's what (if anything) actually carries signal.">
+  <meta name="author" content="QScoring Research">
+  <meta name="robots" content="index,follow,max-image-preview:large">
+  <link rel="canonical" href="https://qscoring.com/blog/predicting-loan-defaults">
+
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Predicting Loan Defaults: What the Data Tells Us Banks Miss">
+  <meta property="og:description" content="67,463 loans. AUC 0.527. Why feature quality beats model choice — always.">
+  <meta property="og:url" content="https://qscoring.com/blog/predicting-loan-defaults">
+  <meta property="og:site_name" content="QScoring">
+  <meta property="og:image" content="https://qscoring.com/blog/predicting-loan-defaults/loan_flat_features.png">
+  <meta property="article:published_time" content="2026-05-21T00:00:00Z">
+  <meta property="article:section" content="Quantitative Research">
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Predicting Loan Defaults: What the Data Tells Us Banks Miss">
+  <meta name="twitter:description" content="67,463 loans. AUC 0.527. Why feature quality beats model choice — always.">
+  <meta name="twitter:image" content="https://qscoring.com/blog/predicting-loan-defaults/loan_flat_features.png">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "Predicting Loan Defaults: What the Data Tells Us Banks Miss",
+    "description": "A model-comparison walkthrough on 67,463 real loan applications — why logistic regression and random forest both fail when the features themselves don't separate.",
+    "image": "https://qscoring.com/blog/predicting-loan-defaults/loan_flat_features.png",
+    "datePublished": "2026-05-21",
+    "dateModified": "2026-05-21",
+    "author": { "@type": "Organization", "name": "QScoring Research" },
+    "publisher": {
+      "@type": "Organization",
+      "name": "QScoring",
+      "url": "https://qscoring.com",
+      "logo": { "@type": "ImageObject", "url": "https://qscoring.com/logo.svg" }
+    },
+    "mainEntityOfPage": { "@type": "WebPage", "@id": "https://qscoring.com/blog/predicting-loan-defaults" }
+  }
+  </script>
+
+  <link rel="preconnect" href="https://rsms.me/">
+  <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+
+  <style>
+    :root {
+      --navy:        #0F172A;
+      --ink:         #1E293B;
+      --slate:       #334155;
+      --muted:       #64748B;
+      --line:        #E2E8F0;
+      --soft:        #F8FAFC;
+      --soft-2:      #F1F5F9;
+      --accent:      #2563EB;
+      --accent-dark: #1D4ED8;
+      --safe:        #059669;
+      --danger:      #DC2626;
+      --purple:      #7C3AED;
+      --paper:       #FFFFFF;
+      --content-max: 720px;
+      --wide-max:   1080px;
+      --text-base: clamp(1.02rem, 0.96rem + 0.3vw, 1.13rem);
+      --text-lg:   clamp(1.18rem, 1.06rem + 0.5vw, 1.32rem);
+      --text-2xl:  clamp(1.8rem, 1.4rem + 1.6vw, 2.4rem);
+      --text-hero: clamp(2.4rem, 1.6rem + 3.4vw, 4.2rem);
+      --space-section: clamp(3.5rem, 2rem + 4vw, 6rem);
+      --radius:    14px;
+      --radius-lg: 22px;
+      --shadow:    0 6px 28px -10px rgba(15,23,42,0.18), 0 2px 6px rgba(15,23,42,0.05);
+      --shadow-lg: 0 30px 60px -30px rgba(15,23,42,0.35), 0 6px 16px -8px rgba(15,23,42,0.12);
+      --ease: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0; background: var(--paper); color: var(--ink);
+      font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+      font-feature-settings: 'cv11', 'ss01', 'ss03';
+      font-size: var(--text-base); line-height: 1.65;
+      -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+    }
+    a { color: var(--accent); text-decoration: none; transition: color 150ms var(--ease); }
+    a:hover { color: var(--accent-dark); text-decoration: underline; text-underline-offset: 3px; }
+
+    header.site {
+      position: sticky; top: 0; z-index: 30;
+      background: rgba(255,255,255,0.85);
+      backdrop-filter: saturate(180%) blur(14px);
+      -webkit-backdrop-filter: saturate(180%) blur(14px);
+      border-bottom: 1px solid var(--line);
+    }
+    .site-inner { max-width: var(--wide-max); margin: 0 auto; padding: 14px 28px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+    .logo { display: inline-flex; align-items: center; gap: 10px; color: var(--navy); font-weight: 700; letter-spacing: -0.02em; font-size: 1.06rem; }
+    .logo-mark {
+      width: 30px; height: 30px; border-radius: 8px;
+      background: linear-gradient(135deg, #0F172A 0%, #7C3AED 100%);
+      display: grid; place-items: center; color: #fff; font-weight: 800; font-size: 0.9rem;
+      letter-spacing: -0.04em; box-shadow: 0 4px 14px -4px rgba(124,58,237,0.55);
+    }
+    nav.site-nav { display: flex; gap: 26px; font-size: 0.94rem; color: var(--slate); }
+    nav.site-nav a { color: var(--slate); }
+    nav.site-nav a:hover { color: var(--navy); text-decoration: none; }
+    .cta {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 9px 16px; border-radius: 999px;
+      background: var(--navy); color: #fff !important;
+      font-weight: 600; font-size: 0.92rem;
+      transition: transform 180ms var(--ease), background 180ms var(--ease);
+    }
+    .cta:hover { background: var(--purple); transform: translateY(-1px); text-decoration: none; }
+    @media (max-width: 720px) { nav.site-nav { display: none; } }
+
+    .hero { max-width: var(--wide-max); margin: 0 auto; padding: clamp(3rem, 2rem + 4vw, 6rem) 28px 2rem; }
+    .eyebrow {
+      display: inline-flex; align-items: center; gap: 10px;
+      font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.16em;
+      color: var(--purple); font-weight: 600;
+    }
+    .eyebrow::before { content: ""; width: 28px; height: 1px; background: var(--purple); }
+    h1.hero-title {
+      margin: 18px 0 18px;
+      font-size: var(--text-hero); line-height: 1.04;
+      letter-spacing: -0.035em; color: var(--navy);
+      font-weight: 800; max-width: 18ch;
+    }
+    h1.hero-title .accent { color: var(--purple); }
+    .deck {
+      max-width: 60ch; font-size: var(--text-lg);
+      color: var(--slate); line-height: 1.5;
+    }
+    .byline {
+      margin-top: 36px; display: flex; align-items: center; gap: 14px;
+      font-size: 0.92rem; color: var(--muted);
+    }
+    .byline .dot { width: 4px; height: 4px; border-radius: 50%; background: var(--muted); }
+    .byline strong { color: var(--ink); font-weight: 600; }
+
+    .stats {
+      max-width: var(--wide-max); margin: 2.5rem auto 0; padding: 0 28px;
+      display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px;
+    }
+    .stat {
+      padding: 22px 22px; border-radius: var(--radius);
+      background: var(--soft); border: 1px solid var(--line);
+      transition: transform 200ms var(--ease), box-shadow 200ms var(--ease), border-color 200ms var(--ease);
+    }
+    .stat:hover { transform: translateY(-2px); box-shadow: var(--shadow); border-color: #CBD5E1; }
+    .stat .num {
+      font-size: clamp(1.7rem, 1.2rem + 1.4vw, 2.4rem); font-weight: 800;
+      color: var(--navy); letter-spacing: -0.03em; line-height: 1;
+    }
+    .stat .label { margin-top: 8px; font-size: 0.86rem; color: var(--muted); line-height: 1.4; }
+    @media (max-width: 720px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+
+    main.article { max-width: var(--content-max); margin: 0 auto; padding: var(--space-section) 28px 4rem; }
+    main.article > * + * { margin-top: 1.1em; }
+    main.article h2 {
+      margin: 3.4rem 0 1rem; font-size: var(--text-2xl);
+      color: var(--navy); letter-spacing: -0.025em;
+      line-height: 1.15; font-weight: 800;
+    }
+    main.article h2::before {
+      content: ""; display: block; width: 44px; height: 3px;
+      background: var(--purple); margin-bottom: 18px; border-radius: 2px;
+    }
+    main.article p { color: var(--ink); }
+    main.article p code, main.article li code {
+      background: var(--soft-2); color: var(--accent-dark);
+      padding: 2px 6px; border-radius: 5px; font-size: 0.9em;
+      font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    main.article strong { color: var(--navy); font-weight: 700; }
+    main.article ul { padding-left: 1.3rem; }
+    main.article li + li { margin-top: 0.4em; }
+
+    .pull {
+      margin: 2.8rem 0; padding: 1.6rem 0 1.6rem 1.8rem;
+      border-left: 3px solid var(--purple);
+      font-size: clamp(1.15rem, 0.9rem + 1vw, 1.5rem);
+      line-height: 1.4; color: var(--navy); font-weight: 600;
+      letter-spacing: -0.015em;
+    }
+
+    figure.chart { margin: 2.6rem -28px; background: var(--paper); }
+    figure.chart .chart-card {
+      border-radius: var(--radius-lg); border: 1px solid var(--line);
+      background:
+        radial-gradient(120% 80% at 0% 0%, rgba(124,58,237,0.05), transparent 60%),
+        var(--paper);
+      padding: 26px 26px 18px; box-shadow: var(--shadow);
+    }
+    figure.chart img { display: block; width: 100%; height: auto; border-radius: 10px; }
+    figure.chart figcaption {
+      margin-top: 14px; font-size: 0.88rem;
+      color: var(--muted); line-height: 1.5;
+    }
+    figure.chart figcaption strong { color: var(--ink); font-weight: 600; }
+    @media (min-width: 900px) { figure.chart { margin: 3rem -120px; } }
+
+    .callout {
+      margin: 2.4rem 0; padding: 22px 24px;
+      background: linear-gradient(135deg, rgba(124,58,237,0.06), rgba(124,58,237,0.02));
+      border: 1px solid rgba(124,58,237,0.18); border-radius: var(--radius);
+      font-size: 0.97rem; color: var(--slate);
+    }
+    .callout .title {
+      display: flex; align-items: center; gap: 10px;
+      font-weight: 700; color: var(--navy);
+      margin-bottom: 6px; font-size: 0.95rem; letter-spacing: 0.01em;
+    }
+    .callout .title .badge {
+      font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase;
+      padding: 3px 8px; background: var(--purple); color: #fff;
+      border-radius: 4px; font-weight: 700;
+    }
+
+    .metrics-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 2rem 0 1.4rem; }
+    .metric { padding: 18px 18px; border-radius: var(--radius); background: var(--navy); color: #fff; }
+    .metric .v { font-size: 1.55rem; font-weight: 800; letter-spacing: -0.02em; line-height: 1; }
+    .metric .k { margin-top: 6px; font-size: 0.78rem; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255,255,255,0.7); }
+    @media (max-width: 600px) { .metrics-grid { grid-template-columns: repeat(2, 1fr); } }
+
+    .cta-card {
+      margin: 4rem -28px 0; padding: 38px 32px;
+      border-radius: var(--radius-lg);
+      background:
+        radial-gradient(70% 100% at 100% 0%, rgba(124,58,237,0.55) 0%, rgba(15,23,42,0) 60%),
+        linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+      color: #fff; box-shadow: var(--shadow-lg);
+      position: relative; overflow: hidden;
+    }
+    .cta-card::after {
+      content: ""; position: absolute; inset: auto -40px -60px auto;
+      width: 220px; height: 220px;
+      background: radial-gradient(closest-side, rgba(124,58,237,0.35), transparent 70%);
+      pointer-events: none;
+    }
+    .cta-card h3 {
+      margin: 0 0 8px; color: #fff;
+      font-size: clamp(1.4rem, 1.1rem + 1vw, 1.9rem);
+      letter-spacing: -0.02em; line-height: 1.2; font-weight: 800;
+    }
+    .cta-card p { margin: 0 0 22px; color: rgba(255,255,255,0.78); max-width: 56ch; }
+    .cta-card .cta { background: var(--purple); color: #fff !important; }
+    .cta-card .cta:hover { background: #A78BFA; color: var(--navy) !important; }
+    @media (min-width: 900px) { .cta-card { margin: 4rem -120px 0; } }
+
+    footer.site { margin-top: 4rem; padding: 36px 28px 56px; border-top: 1px solid var(--line); background: var(--soft); }
+    .footer-inner { max-width: var(--wide-max); margin: 0 auto; display: flex; flex-wrap: wrap; gap: 18px; justify-content: space-between; font-size: 0.88rem; color: var(--muted); }
+    .footer-inner a { color: var(--slate); }
+    .meta-foot { margin-top: 18px; max-width: var(--content-max); padding: 0 28px; margin-left: auto; margin-right: auto; font-size: 0.82rem; color: var(--muted); line-height: 1.6; }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; } }
+  </style>
+</head>
+<body>
+
+<header class="site">
+  <div class="site-inner">
+    <a class="logo" href="https://qscoring.com">
+      <span class="logo-mark">Q</span>
+      <span>QScoring</span>
+    </a>
+    <nav class="site-nav" aria-label="Primary">
+      <a href="https://qscoring.com/research">Research</a>
+      <a href="https://qscoring.com/blog">Blog</a>
+      <a href="https://qscoring.com/methodology">Methodology</a>
+      <a href="https://qscoring.com/pricing">Pricing</a>
+    </nav>
+    <a class="cta" href="https://qscoring.com/signup">Try QScoring &rarr;</a>
+  </div>
+</header>
+
+<section class="hero">
+  <span class="eyebrow">Quantitative Research</span>
+  <h1 class="hero-title">Predicting loan defaults: what the data tells us banks <span class="accent">miss</span>.</h1>
+  <p class="deck">
+    We trained two models on 67,463 real loan applications — logistic regression and random forest, the workhorses of every credit scorecard. Every headline feature lenders advertise (grade, home ownership, interest rate, verification) turned out to be statistically flat against default. Here&apos;s what we found instead.
+  </p>
+  <div class="byline">
+    <span><strong>QScoring Research</strong></span>
+    <span class="dot"></span>
+    <span>May 21, 2026</span>
+    <span class="dot"></span>
+    <span>13 min read</span>
+  </div>
+</section>
+
+<section class="stats" aria-label="Headline statistics">
+  <div class="stat">
+    <div class="num">67,463</div>
+    <div class="label">Loan applications in the dataset</div>
+  </div>
+  <div class="stat">
+    <div class="num">9.25%</div>
+    <div class="label">Overall default rate — realistic for prime/near-prime portfolios</div>
+  </div>
+  <div class="stat">
+    <div class="num">0.527</div>
+    <div class="label">Best ROC AUC achieved (random forest)</div>
+  </div>
+  <div class="stat">
+    <div class="num">1.9pp</div>
+    <div class="label">Spread between Grade A and Grade G default rates</div>
+  </div>
+</section>
+
+<main class="article">
+
+  <p>The credit-risk dataset we covered <a href="how-credit-scoring-models-actually-work.html">in our last post</a> was generous. Loan grades that ran from 10% defaults at Grade A to 98% at Grade G. Loan-to-income ratios with a sharp cliff at 30%. A logistic regression got to AUC 0.871. Reading that post, you&apos;d be forgiven for thinking credit scoring is a solved problem.</p>
+
+  <p>This post is about what happens when the dataset isn&apos;t generous.</p>
+
+  <p>We pulled the <a href="https://www.kaggle.com/datasets/hemanthsai7/loandefault">hemanthsai7/loandefault</a> Kaggle dataset — 67,463 anonymized loan applications, 35 features per loan, a real-world 9.25% default rate. Then we trained the two standard credit scoring models: <strong>logistic regression</strong> (the model class bank regulators are most comfortable with) and <strong>random forest</strong> (the model class data scientists reach for when they want non-linear interactions).</p>
+
+  <p>Both models barely beat random. Here&apos;s why — and what the right lesson is.</p>
+
+  <h2>1. The headline features are flat</h2>
+
+  <p>If you visit any lender&apos;s FAQ page, you&apos;ll see the same four risk signals advertised: <em>loan grade</em>, <em>home ownership</em>, <em>verification status</em>, and <em>interest rate</em>. The implication is that these are how the bank decides whether you&apos;re a good risk.</p>
+
+  <p>In this dataset, they aren&apos;t.</p>
+
+  <figure class="chart">
+    <div class="chart-card">
+      <img src="../assets/loan_flat_features.png" alt="Three-panel bar chart showing default rate by loan grade, home ownership, and verification status — all hovering near the 9.25% overall baseline">
+      <figcaption><strong>Figure 1.</strong> Default rate by loan grade, home ownership, and verification status. The dashed line is the overall 9.25% default rate. Grade A defaults at 8.7%; Grade G defaults at 10.6%. That&apos;s a <strong>1.9 percentage point</strong> spread across what is supposed to be the lender&apos;s most discriminating risk tier.</figcaption>
+    </div>
+  </figure>
+
+  <p>For comparison: the previous credit-risk dataset showed an <strong>88 percentage point</strong> spread between Grade A and Grade G. Here it&apos;s 1.9. The grade variable in this dataset is essentially noise — it has the column heading of a risk signal but none of the discrimination.</p>
+
+  <p>Home ownership tells the same story: mortgage holders default at 8.9%, outright owners at 10.2%, renters at 9.6%. Verification status is even flatter: not verified (9.2%), source verified (9.3%), verified (9.1%). None of these are signals; they&apos;re table dressings.</p>
+
+  <p>Interest rate is the most striking of the four:</p>
+
+  <figure class="chart">
+    <div class="chart-card">
+      <img src="../assets/loan_rate_overlap.png" alt="Two overlapping density curves of interest rates for repaid vs defaulted loans — the curves are nearly identical">
+      <figcaption><strong>Figure 2.</strong> Interest rate distributions for repaid vs defaulted loans. Mean for repaid: 11.84%. Mean for defaulted: 11.88%. The lender priced both groups identically. Either the original underwriting model treated all of these applications the same way, or the rate is set by factors uncorrelated with the default outcome.</figcaption>
+    </div>
+  </figure>
+
+  <p>Either way, interest rate cannot help a downstream model predict default in this dataset.</p>
+
+  <h2>2. Where signal does live — and it&apos;s thin</h2>
+
+  <p>If the headline features don&apos;t carry signal, what does? Two columns: <code>Public Record</code> and <code>Delinquency - two years</code>. Both are negative-history flags — incidents the borrower has already accumulated before this loan was originated.</p>
+
+  <figure class="chart">
+    <div class="chart-card">
+      <img src="../assets/loan_signal_features.png" alt="Two bar charts: default rate by number of public records and by number of 2-year delinquencies, both showing rising default rates with more flags">
+      <figcaption><strong>Figure 3.</strong> The features that do separate borrowers — but only weakly. Borrowers with 3+ public records default at 12.4% vs 9.2% for those with none. Borrowers with 4+ recent delinquencies default at 12.7% vs 9.2%. Real signal, but the populations are tiny: the 4+ delinquency bucket has only 577 borrowers out of 67,463.</figcaption>
+    </div>
+  </figure>
+
+  <p>The maximum absolute Pearson correlation between any individual feature and the default outcome is <strong>0.011</strong>. For comparison, a feature would need a correlation of ~0.05+ to be considered weakly informative in most credit modeling contexts. Every feature in this dataset is below the "weakly informative" line.</p>
+
+  <div class="callout">
+    <div class="title"><span class="badge">Why this matters</span> The features aren&apos;t the problem — they&apos;re the answer</div>
+    Real production scorecards from FICO, VantageScore, and the major bureaus use features this dataset doesn&apos;t have: trade-line-level credit utilization across all open accounts, hard-inquiry velocity, payment recency on each tradeline, balance trajectory, and total debt burden across <em>all</em> existing obligations. Those features routinely show correlations of 0.15–0.30 with default. The dataset we&apos;re using simply doesn&apos;t include them. What "banks miss" — for the banks that use thin feature sets like this one — is the feature set itself.
+  </div>
+
+  <h2>3. Logistic regression vs. random forest</h2>
+
+  <p>The conventional wisdom on credit modeling: start with logistic regression because regulators understand it, then move to random forest or gradient boosting if you need to capture non-linear feature interactions. Random forests, the story goes, can wring extra signal from interactions a linear model misses.</p>
+
+  <p>To test this, we trained both on the same 50,597-row train split (75%) and evaluated on the same 16,866-row test split (25%). To keep the comparison apples-to-apples in the face of 9.25% class imbalance, we tuned each model&apos;s probability threshold so that each one flags exactly the bottom 9.25% as predicted defaults — the same "lender risk appetite" for both.</p>
+
+  <p>Results:</p>
+
+  <div class="metrics-grid">
+    <div class="metric"><div class="v">0.520 → 0.527</div><div class="k">ROC AUC (LR → RF)</div></div>
+    <div class="metric"><div class="v">+0.7pp</div><div class="k">AUC uplift from random forest</div></div>
+    <div class="metric"><div class="v">9.8 → 9.9%</div><div class="k">Recall at matched threshold</div></div>
+    <div class="metric"><div class="v">~0.5</div><div class="k">Random baseline AUC</div></div>
+  </div>
+
+  <p>Both models are <strong>barely above the random-coin-flip baseline.</strong> The random forest&apos;s extra capacity bought us 0.7 AUC points. At the operating threshold, that translates to one additional default caught out of every ~1,500 loans flagged.</p>
+
+  <figure class="chart">
+    <div class="chart-card">
+      <img src="../assets/loan_model_comparison.png" alt="Grouped bar chart comparing AUC, precision, recall, and F1 for logistic regression vs random forest — both models close, both modest">
+      <figcaption><strong>Figure 4.</strong> Side-by-side metric comparison. Random forest edges out logistic regression on every metric, but the margins are within statistical noise. The story isn&apos;t "RF wins" — it&apos;s "neither model can rescue a weak feature set."</figcaption>
+    </div>
+  </figure>
+
+  <figure class="chart">
+    <div class="chart-card">
+      <img src="../assets/loan_roc_overlay.png" alt="ROC curves for logistic regression and random forest — both lines hug the diagonal baseline closely">
+      <figcaption><strong>Figure 5.</strong> ROC curves. A perfect classifier hugs the upper-left corner; a random classifier hugs the diagonal. Both models hug the diagonal. The random forest&apos;s curve is fractionally above the LR curve, which is fractionally above random.</figcaption>
+    </div>
+  </figure>
+
+  <p>This is what AUC 0.52 looks like. It&apos;s not zero signal — both models are statistically above the 0.5 baseline — but it&apos;s the kind of signal you&apos;d want to verify with a much larger sample before betting any actual capital on it.</p>
+
+  <h2>4. The confusion matrices tell the operational story</h2>
+
+  <p>AUC summarizes the model&apos;s ranking quality. The confusion matrix shows what happens when you actually use the model to make decisions. At the prevalence-matched threshold, here&apos;s how each model performs on the 16,866-loan test set:</p>
+
+  <figure class="chart">
+    <div class="chart-card">
+      <img src="../assets/loan_confusion_matrices.png" alt="Two confusion matrices side by side — logistic regression and random forest both showing very similar predicted-default counts and similar true-positive vs false-positive ratios">
+      <figcaption><strong>Figure 6.</strong> Confusion matrices at each model&apos;s tuned threshold (each model flags ~9.25% of test loans as predicted defaults). LR catches 153 actual defaults out of 1,560 (recall 9.8%) at the cost of 1,408 false positives. RF catches 154 (recall 9.9%) at the cost of 1,407 false positives. The two matrices are essentially identical.</figcaption>
+    </div>
+  </figure>
+
+  <p>To put that in business terms: for every 100 loans the model flags as risky, only about 10 will actually default. The other 90 would have repaid if approved. That&apos;s a <strong>10% precision</strong> — barely above the 9.25% you&apos;d get by flagging loans at random.</p>
+
+  <p>A lender deploying this model into production wouldn&apos;t see meaningfully lower losses. They&apos;d just reject more good borrowers.</p>
+
+  <div class="pull">
+    No amount of model complexity recovers signal that isn&apos;t in the features.
+  </div>
+
+  <h2>5. What the random forest "found"</h2>
+
+  <p>Even when the model performs poorly, its feature importance distribution tells us something. If the random forest had found a small handful of strong predictors, we&apos;d see a sharp drop-off in the importance ranking. If it found no predictors at all, every feature would contribute roughly equally.</p>
+
+  <figure class="chart">
+    <div class="chart-card">
+      <img src="../assets/loan_feature_importance.png" alt="Horizontal bar chart of top 14 random forest feature importances — values are tightly clustered between 0.045 and 0.060, with no dominant feature">
+      <figcaption><strong>Figure 7.</strong> Random forest feature importance, top 14. The top feature (<code>Loan Amount</code>) has importance 0.056. The 14th feature has importance 0.034. That&apos;s a remarkably flat distribution — exactly what you&apos;d expect when the model is grasping at marginal signal across many weak features rather than relying on a few strong ones.</figcaption>
+    </div>
+  </figure>
+
+  <p>The visible features in the top of the ranking — Loan Amount, Home Value Reported, Total Received Late Fee, Interest Rate, Revolving Utilities, Funded Amount Investor — are mostly continuous variables. The model is treating them as a high-dimensional ranking problem rather than finding categorical "buckets" of high-risk borrowers, because no such buckets exist in this dataset.</p>
+
+  <p>That&apos;s the diagnostic. A random forest with a flat importance distribution and a sub-0.55 AUC is telling you: <em>the answer isn&apos;t in this data.</em></p>
+
+  <h2>6. The right lesson</h2>
+
+  <p>It would be easy to read this post as a takedown of random forests, or of logistic regression, or of credit scoring in general. None of those are the right read.</p>
+
+  <p>The right read is: <strong>data quality and feature selection beat model choice. Every single time.</strong></p>
+
+  <ul>
+    <li><strong>If the features carry signal,</strong> as in the credit-risk dataset, even logistic regression — the oldest, simplest classifier in the toolkit — gets to AUC 0.87.</li>
+    <li><strong>If the features don&apos;t carry signal,</strong> as in this loan-default dataset, even random forest — a non-linear ensemble with hundreds of trees — barely beats random guessing.</li>
+  </ul>
+
+  <p>Switching algorithms is the cheapest thing in a modeling project. It costs an hour of compute and a one-line code change. Adding a genuinely informative feature can take weeks of data engineering, vendor negotiation, or new data collection. So when teams ship a weak model and reach for a fancier algorithm before reaching for better features, they&apos;re optimizing the wrong axis.</p>
+
+  <h2>7. Why this matters for an equity investor</h2>
+
+  <p>QScoring isn&apos;t a credit bureau. We score equities. But the modeling discipline rhymes:</p>
+
+  <ul>
+    <li><strong>Equity factor research</strong> spent decades arguing about whether the value, size, momentum, profitability, and investment factors are real, robust, and persistent. The factor zoo problem (Cochrane&apos;s &ldquo;hundreds of significant factors discovered&rdquo;) is the equity-research equivalent of an overfit model finding spurious signal in noise.</li>
+    <li><strong>Single-stock scoring</strong> needs features that historically separate winners from losers — measured by their information coefficient against forward returns, not their statistical fit in an in-sample regression.</li>
+    <li><strong>Feature engineering</strong> matters more than algorithm choice. QScoring uses a deliberately small, vetted feature set drawn from the academic factor literature, scored consistently across the universe. Adding a deep-learning ranker on top of weak features would be exactly the mistake this post is warning against.</li>
+  </ul>
+
+  <p>You can browse the <a href="https://qscoring.com/methodology">methodology page</a> to see which features we use and how they&apos;re combined, or look at any individual ticker&apos;s <a href="https://qscoring.com/score">live score</a> to see the factor breakdown — including each factor&apos;s contribution and the underlying metric values.</p>
+
+  <div class="cta-card">
+    <h3>See the same modeling discipline applied to stocks.</h3>
+    <p>QScoring rates every U.S.-listed equity using the same evidence-first approach you just read about: vetted features, transparent weighting, no black-box models. Browse the universe or score any ticker free.</p>
+    <a class="cta" href="https://qscoring.com/signup">Open a free account &rarr;</a>
+  </div>
+
+</main>
+
+<aside class="meta-foot">
+  <p><strong>Reproducibility.</strong> All analysis in this post is reproducible from <code>analysis/loan_default_prediction.py</code> using the publicly available <a href="https://www.kaggle.com/datasets/hemanthsai7/loandefault">hemanthsai7/loandefault</a> dataset from Kaggle. Models trained with scikit-learn 1.8.0 on Python 3.13. Train/test split and random forest are seeded (<code>random_state=42</code>) for exact reproduction.</p>
+  <p><strong>Threshold note.</strong> Both models were evaluated at per-model thresholds that flag the top 9.25% of the test set as predicted defaults, matching the population prevalence rate. This is a standard practice for class-imbalanced binary classifiers and gives both models the same operational risk appetite for the precision/recall comparison.</p>
+  <p><strong>Disclosures.</strong> This article is for educational purposes. It is not a credit application service. The dataset is anonymized public Kaggle data — no real borrower information is referenced or recoverable.</p>
+</aside>
+
+<footer class="site">
+  <div class="footer-inner">
+    <div>&copy; 2026 QScoring &middot; Quantitative research for individual investors</div>
+    <div>
+      <a href="https://qscoring.com/methodology">Methodology</a> &middot;
+      <a href="https://qscoring.com/blog">Blog</a> &middot;
+      <a href="https://qscoring.com/contact">Contact</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,98 @@
+{
+  "n_total": 67463,
+  "n_default": 6241,
+  "default_rate_pct": 9.25,
+  "n_test": 16866,
+  "n_features": 34,
+  "flat_features": {
+    "grade_min_pct": 8.72,
+    "grade_max_pct": 10.63,
+    "grade_spread_pp": 1.91,
+    "home_ownership_min_pct": 8.87,
+    "home_ownership_max_pct": 10.16,
+    "verification_min_pct": 9.13,
+    "verification_max_pct": 9.34,
+    "rate_mean_repaid": 11.84,
+    "rate_mean_default": 11.88
+  },
+  "signal_features": {
+    "public_record_0_pct": 9.18,
+    "public_record_3plus_pct": 12.36,
+    "delinquency_0_pct": 9.18,
+    "delinquency_4plus_pct": 12.65
+  },
+  "models": {
+    "logistic_regression": {
+      "auc": 0.52,
+      "accuracy": 0.833,
+      "precision": 0.098,
+      "recall": 0.098,
+      "f1": 0.098,
+      "threshold": 0.1051,
+      "confusion": {
+        "tn": 13898,
+        "fp": 1408,
+        "fn": 1407,
+        "tp": 153
+      }
+    },
+    "random_forest": {
+      "auc": 0.527,
+      "accuracy": 0.833,
+      "precision": 0.099,
+      "recall": 0.099,
+      "f1": 0.099,
+      "threshold": 0.1409,
+      "confusion": {
+        "tn": 13899,
+        "fp": 1407,
+        "fn": 1406,
+        "tp": 154
+      }
+    },
+    "auc_uplift_pct": 0.69,
+    "rf_recall_uplift_vs_lr_pct": 0.06
+  },
+  "rf_top_features": [
+    {
+      "feature": "Loan Amount",
+      "importance": 0.0563
+    },
+    {
+      "feature": "Home Value Reported",
+      "importance": 0.0559
+    },
+    {
+      "feature": "Total Received Late Fee",
+      "importance": 0.0559
+    },
+    {
+      "feature": "Interest Rate",
+      "importance": 0.0557
+    },
+    {
+      "feature": "Revolving Utilities",
+      "importance": 0.0552
+    },
+    {
+      "feature": "Funded Amount Investor",
+      "importance": 0.055
+    },
+    {
+      "feature": "Total Current Balance",
+      "importance": 0.0547
+    },
+    {
+      "feature": "Recoveries",
+      "importance": 0.0547
+    },
+    {
+      "feature": "Collection Recovery Fee",
+      "importance": 0.0547
+    },
+    {
+      "feature": "Debit to Income",
+      "importance": 0.0544
+    }
+  ]
+}
