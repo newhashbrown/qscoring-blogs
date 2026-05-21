@@ -1,0 +1,27 @@
+# Python virtualenv
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Kaggle datasets — re-downloadable via `kaggle datasets download`
+datasets/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Local secrets — never commit
+.env
+.env.local
+*.key
+*.pem

@@ -1,0 +1,169 @@
+{
+  "n_total": 32437,
+  "n_default": 7094,
+  "default_rate_pct": 21.9,
+  "median_income": 55000,
+  "median_loan": 8000,
+  "median_rate_pct": 11.0,
+  "grade_default_rates": {
+    "A": {
+      "rate_pct": 10.0,
+      "n": 10744
+    },
+    "B": {
+      "rate_pct": 16.3,
+      "n": 10402
+    },
+    "C": {
+      "rate_pct": 20.8,
+      "n": 6424
+    },
+    "D": {
+      "rate_pct": 59.2,
+      "n": 3607
+    },
+    "E": {
+      "rate_pct": 64.6,
+      "n": 958
+    },
+    "F": {
+      "rate_pct": 70.6,
+      "n": 238
+    },
+    "G": {
+      "rate_pct": 98.4,
+      "n": 64
+    }
+  },
+  "home_default_rates": {
+    "Rent": {
+      "rate_pct": 31.6,
+      "n": 16412
+    },
+    "Other": {
+      "rate_pct": 31.4,
+      "n": 105
+    },
+    "Mortgage": {
+      "rate_pct": 12.6,
+      "n": 13347
+    },
+    "Own": {
+      "rate_pct": 7.5,
+      "n": 2573
+    }
+  },
+  "intent_default_rates": {
+    "Debt consolidation": {
+      "rate_pct": 28.7,
+      "n": 5183
+    },
+    "Medical": {
+      "rate_pct": 26.7,
+      "n": 6045
+    },
+    "Home improvement": {
+      "rate_pct": 26.2,
+      "n": 3585
+    },
+    "Personal": {
+      "rate_pct": 19.9,
+      "n": 5491
+    },
+    "Education": {
+      "rate_pct": 17.3,
+      "n": 6437
+    },
+    "Venture": {
+      "rate_pct": 14.9,
+      "n": 5696
+    }
+  },
+  "lti_default_rates": {
+    "<5%": {
+      "rate_pct": 10.2,
+      "n": 3349
+    },
+    "5-10%": {
+      "rate_pct": 12.5,
+      "n": 6996
+    },
+    "10-15%": {
+      "rate_pct": 12.8,
+      "n": 6704
+    },
+    "15-20%": {
+      "rate_pct": 18.0,
+      "n": 5360
+    },
+    "20-30%": {
+      "rate_pct": 22.0,
+      "n": 6194
+    },
+    "30-50%": {
+      "rate_pct": 69.7,
+      "n": 3586
+    },
+    "50%+": {
+      "rate_pct": 78.6,
+      "n": 248
+    }
+  },
+  "model": {
+    "auc": 0.871,
+    "accuracy": 0.805,
+    "precision": 0.538,
+    "recall": 0.776,
+    "test_size": 8110,
+    "confusion": {
+      "tn": 5152,
+      "fp": 1184,
+      "fn": 397,
+      "tp": 1377
+    },
+    "top_positive_features": [
+      {
+        "feature": "loan_percent_income",
+        "coef": 1.376
+      },
+      {
+        "feature": "loan_grade_D",
+        "coef": 0.754
+      },
+      {
+        "feature": "loan_grade_E",
+        "coef": 0.462
+      },
+      {
+        "feature": "person_home_ownership_RENT",
+        "coef": 0.335
+      },
+      {
+        "feature": "loan_grade_F",
+        "coef": 0.263
+      }
+    ],
+    "top_negative_features": [
+      {
+        "feature": "loan_amnt",
+        "coef": -0.679
+      },
+      {
+        "feature": "person_home_ownership_OWN",
+        "coef": -0.451
+      },
+      {
+        "feature": "loan_intent_VENTURE",
+        "coef": -0.375
+      },
+      {
+        "feature": "loan_intent_EDUCATION",
+        "coef": -0.238
+      },
+      {
+        "feature": "loan_intent_PERSONAL",
+        "coef": -0.16
+      }
+    ]
+  }
+}

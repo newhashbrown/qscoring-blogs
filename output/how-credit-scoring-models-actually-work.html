@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>How Credit Scoring Models Actually Work: A Data-Driven Breakdown | QScoring</title>
+  <meta name="description" content="We trained a credit scoring model on 32,437 real loan applications. Here's what actually predicts default — by loan grade, income, home ownership, and loan-to-income ratio — with a working logistic regression model that scores AUC 0.871.">
+  <meta name="author" content="QScoring Research">
+  <meta name="robots" content="index,follow,max-image-preview:large">
+  <link rel="canonical" href="https://qscoring.com/blog/how-credit-scoring-models-actually-work">
+
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="How Credit Scoring Models Actually Work: A Data-Driven Breakdown">
+  <meta property="og:description" content="32,437 loan applications. AUC 0.871. The five signals that actually predict default — and the ones that don't.">
+  <meta property="og:url" content="https://qscoring.com/blog/how-credit-scoring-models-actually-work">
+  <meta property="og:site_name" content="QScoring">
+  <meta property="og:image" content="https://qscoring.com/blog/assets/default_by_grade.png">
+  <meta property="article:published_time" content="2026-05-21T00:00:00Z">
+  <meta property="article:section" content="Quantitative Research">
+  <meta property="article:tag" content="credit scoring">
+  <meta property="article:tag" content="risk modeling">
+  <meta property="article:tag" content="data science">
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="How Credit Scoring Models Actually Work">
+  <meta name="twitter:description" content="32,437 loan applications. AUC 0.871. The five signals that actually predict default.">
+  <meta name="twitter:image" content="https://qscoring.com/blog/assets/default_by_grade.png">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "How Credit Scoring Models Actually Work: A Data-Driven Breakdown",
+    "description": "A data-driven walkthrough of credit scoring built on 32,437 real loan applications, including a working logistic regression model.",
+    "image": "https://qscoring.com/blog/assets/default_by_grade.png",
+    "datePublished": "2026-05-21",
+    "dateModified": "2026-05-21",
+    "author": { "@type": "Organization", "name": "QScoring Research" },
+    "publisher": {
+      "@type": "Organization",
+      "name": "QScoring",
+      "url": "https://qscoring.com",
+      "logo": { "@type": "ImageObject", "url": "https://qscoring.com/logo.svg" }
+    },
+    "mainEntityOfPage": { "@type": "WebPage", "@id": "https://qscoring.com/blog/how-credit-scoring-models-actually-work" }
+  }
+  </script>
+
+  <link rel="preconnect" href="https://rsms.me/">
+  <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+
+  <style>
+    :root {
+      --navy:        #0F172A;
+      --ink:         #1E293B;
+      --slate:       #334155;
+      --muted:       #64748B;
+      --line:        #E2E8F0;
+      --soft:        #F8FAFC;
+      --soft-2:      #F1F5F9;
+      --accent:      #2563EB;
+      --accent-dark: #1D4ED8;
+      --safe:        #059669;
+      --danger:      #DC2626;
+      --paper:       #FFFFFF;
+
+      --content-max: 720px;
+      --wide-max:   1080px;
+
+      --text-xs:   clamp(0.78rem, 0.74rem + 0.18vw, 0.82rem);
+      --text-sm:   clamp(0.88rem, 0.84rem + 0.2vw, 0.94rem);
+      --text-base: clamp(1.02rem, 0.96rem + 0.3vw, 1.13rem);
+      --text-lg:   clamp(1.18rem, 1.06rem + 0.5vw, 1.32rem);
+      --text-xl:   clamp(1.42rem, 1.2rem + 1vw, 1.76rem);
+      --text-2xl:  clamp(1.8rem, 1.4rem + 1.6vw, 2.4rem);
+      --text-hero: clamp(2.4rem, 1.6rem + 3.4vw, 4.2rem);
+
+      --space-section: clamp(3.5rem, 2rem + 4vw, 6rem);
+
+      --radius-sm: 6px;
+      --radius:    14px;
+      --radius-lg: 22px;
+
+      --shadow-sm: 0 1px 2px rgba(15,23,42,0.06);
+      --shadow:    0 6px 28px -10px rgba(15,23,42,0.18), 0 2px 6px rgba(15,23,42,0.05);
+      --shadow-lg: 0 30px 60px -30px rgba(15,23,42,0.35), 0 6px 16px -8px rgba(15,23,42,0.12);
+
+      --ease: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    html { -webkit-text-size-adjust: 100%; }
+
+    body {
+      margin: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+      font-feature-settings: 'cv11', 'ss01', 'ss03';
+      font-size: var(--text-base);
+      line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+
+    a { color: var(--accent); text-decoration: none; transition: color 150ms var(--ease); }
+    a:hover { color: var(--accent-dark); text-decoration: underline; text-underline-offset: 3px; }
+
+    /* ---------------- Header ---------------- */
+    header.site {
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      background: rgba(255,255,255,0.85);
+      backdrop-filter: saturate(180%) blur(14px);
+      -webkit-backdrop-filter: saturate(180%) blur(14px);
+      border-bottom: 1px solid var(--line);
+    }
+    .site-inner {
+      max-width: var(--wide-max);
+      margin: 0 auto;
+      padding: 14px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+    }
+    .logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--navy);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      font-size: 1.06rem;
+    }
+    .logo-mark {
+      width: 30px; height: 30px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #0F172A 0%, #2563EB 100%);
+      display: grid; place-items: center;
+      color: #fff;
+      font-weight: 800;
+      font-size: 0.9rem;
+      letter-spacing: -0.04em;
+      box-shadow: 0 4px 14px -4px rgba(37, 99, 235, 0.55);
+    }
+    nav.site-nav {
+      display: flex;
+      gap: 26px;
+      font-size: 0.94rem;
+      color: var(--slate);
+    }
+    nav.site-nav a { color: var(--slate); }
+    nav.site-nav a:hover { color: var(--navy); text-decoration: none; }
+    .cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 16px;
+      border-radius: 999px;
+      background: var(--navy);
+      color: #fff !important;
+      font-weight: 600;
+      font-size: 0.92rem;
+      transition: transform 180ms var(--ease), background 180ms var(--ease);
+    }
+    .cta:hover { background: var(--accent); transform: translateY(-1px); text-decoration: none; }
+    @media (max-width: 720px) {
+      nav.site-nav { display: none; }
+    }
+
+    /* ---------------- Hero ---------------- */
+    .hero {
+      max-width: var(--wide-max);
+      margin: 0 auto;
+      padding: clamp(3rem, 2rem + 4vw, 6rem) 28px 2rem;
+    }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: var(--accent);
+      font-weight: 600;
+    }
+    .eyebrow::before {
+      content: "";
+      width: 28px; height: 1px;
+      background: var(--accent);
+    }
+    h1.hero-title {
+      margin: 18px 0 18px;
+      font-size: var(--text-hero);
+      line-height: 1.04;
+      letter-spacing: -0.035em;
+      color: var(--navy);
+      font-weight: 800;
+      max-width: 18ch;
+    }
+    h1.hero-title .accent { color: var(--accent); }
+    .deck {
+      max-width: 60ch;
+      font-size: var(--text-lg);
+      color: var(--slate);
+      line-height: 1.5;
+    }
+    .byline {
+      margin-top: 36px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      font-size: 0.92rem;
+      color: var(--muted);
+    }
+    .byline .dot { width: 4px; height: 4px; border-radius: 50%; background: var(--muted); }
+    .byline strong { color: var(--ink); font-weight: 600; }
+
+    /* ---------------- Stat strip ---------------- */
+    .stats {
+      max-width: var(--wide-max);
+      margin: 2.5rem auto 0;
+      padding: 0 28px;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .stat {
+      padding: 22px 22px;
+      border-radius: var(--radius);
+      background: var(--soft);
+      border: 1px solid var(--line);
+      transition: transform 200ms var(--ease), box-shadow 200ms var(--ease), border-color 200ms var(--ease);
+    }
+    .stat:hover { transform: translateY(-2px); box-shadow: var(--shadow); border-color: #CBD5E1; }
+    .stat .num {
+      font-size: clamp(1.7rem, 1.2rem + 1.4vw, 2.4rem);
+      font-weight: 800;
+      color: var(--navy);
+      letter-spacing: -0.03em;
+      line-height: 1;
+    }
+    .stat .label {
+      margin-top: 8px;
+      font-size: 0.86rem;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+    @media (max-width: 720px) {
+      .stats { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    /* ---------------- Article body ---------------- */
+    main.article {
+      max-width: var(--content-max);
+      margin: 0 auto;
+      padding: var(--space-section) 28px 4rem;
+    }
+    main.article > * + * { margin-top: 1.1em; }
+
+    main.article h2 {
+      margin: 3.4rem 0 1rem;
+      font-size: var(--text-2xl);
+      color: var(--navy);
+      letter-spacing: -0.025em;
+      line-height: 1.15;
+      font-weight: 800;
+    }
+    main.article h2::before {
+      content: "";
+      display: block;
+      width: 44px;
+      height: 3px;
+      background: var(--accent);
+      margin-bottom: 18px;
+      border-radius: 2px;
+    }
+    main.article h3 {
+      margin: 2.2rem 0 0.6rem;
+      font-size: var(--text-xl);
+      color: var(--navy);
+      letter-spacing: -0.02em;
+      font-weight: 700;
+    }
+    main.article p { color: var(--ink); }
+    main.article p code,
+    main.article li code {
+      background: var(--soft-2);
+      color: var(--accent-dark);
+      padding: 2px 6px;
+      border-radius: 5px;
+      font-size: 0.9em;
+      font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    main.article strong { color: var(--navy); font-weight: 700; }
+
+    main.article ul {
+      padding-left: 1.3rem;
+    }
+    main.article li + li { margin-top: 0.4em; }
+
+    /* Pull quote */
+    .pull {
+      margin: 2.8rem 0;
+      padding: 1.6rem 0 1.6rem 1.8rem;
+      border-left: 3px solid var(--accent);
+      font-size: clamp(1.15rem, 0.9rem + 1vw, 1.5rem);
+      line-height: 1.4;
+      color: var(--navy);
+      font-weight: 600;
+      letter-spacing: -0.015em;
+    }
+
+    /* Figures break out of the reading column */
+    figure.chart {
+      margin: 2.6rem -28px;
+      background: var(--paper);
+    }
+    figure.chart .chart-card {
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--line);
+      background:
+        radial-gradient(120% 80% at 0% 0%, rgba(37,99,235,0.05), transparent 60%),
+        var(--paper);
+      padding: 26px 26px 18px;
+      box-shadow: var(--shadow);
+    }
+    figure.chart img {
+      display: block;
+      width: 100%;
+      height: auto;
+      border-radius: 10px;
+    }
+    figure.chart figcaption {
+      margin-top: 14px;
+      font-size: 0.88rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    figure.chart figcaption strong { color: var(--ink); font-weight: 600; }
+    @media (min-width: 900px) {
+      figure.chart {
+        margin: 3rem -120px;
+      }
+    }
+
+    /* Callout box */
+    .callout {
+      margin: 2.4rem 0;
+      padding: 22px 24px;
+      background: linear-gradient(135deg, rgba(37,99,235,0.06), rgba(37,99,235,0.02));
+      border: 1px solid rgba(37,99,235,0.18);
+      border-radius: var(--radius);
+      font-size: 0.97rem;
+      color: var(--slate);
+    }
+    .callout .title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      color: var(--navy);
+      margin-bottom: 6px;
+      font-size: 0.95rem;
+      letter-spacing: 0.01em;
+    }
+    .callout .title .badge {
+      font-size: 0.7rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      background: var(--accent);
+      color: #fff;
+      border-radius: 4px;
+      font-weight: 700;
+    }
+
+    /* Model metrics table */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin: 2rem 0 1.4rem;
+    }
+    .metric {
+      padding: 18px 18px;
+      border-radius: var(--radius);
+      background: var(--navy);
+      color: #fff;
+    }
+    .metric .v {
+      font-size: 1.55rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      line-height: 1;
+    }
+    .metric .k {
+      margin-top: 6px;
+      font-size: 0.78rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.7);
+    }
+    @media (max-width: 600px) {
+      .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    /* CTA card */
+    .cta-card {
+      margin: 4rem -28px 0;
+      padding: 38px 32px;
+      border-radius: var(--radius-lg);
+      background:
+        radial-gradient(70% 100% at 100% 0%, rgba(37,99,235,0.55) 0%, rgba(15,23,42,0) 60%),
+        linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+      color: #fff;
+      box-shadow: var(--shadow-lg);
+      position: relative;
+      overflow: hidden;
+    }
+    .cta-card::after {
+      content: "";
+      position: absolute;
+      inset: auto -40px -60px auto;
+      width: 220px; height: 220px;
+      background: radial-gradient(closest-side, rgba(37,99,235,0.35), transparent 70%);
+      pointer-events: none;
+    }
+    .cta-card h3 {
+      margin: 0 0 8px;
+      color: #fff;
+      font-size: clamp(1.4rem, 1.1rem + 1vw, 1.9rem);
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+      font-weight: 800;
+    }
+    .cta-card p {
+      margin: 0 0 22px;
+      color: rgba(255,255,255,0.78);
+      max-width: 56ch;
+    }
+    .cta-card .cta {
+      background: var(--accent);
+      color: #fff !important;
+    }
+    .cta-card .cta:hover { background: #60A5FA; color: var(--navy) !important; }
+    @media (min-width: 900px) {
+      .cta-card { margin: 4rem -120px 0; }
+    }
+
+    /* ---------------- Footer ---------------- */
+    footer.site {
+      margin-top: 4rem;
+      padding: 36px 28px 56px;
+      border-top: 1px solid var(--line);
+      background: var(--soft);
+    }
+    .footer-inner {
+      max-width: var(--wide-max);
+      margin: 0 auto;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 18px;
+      justify-content: space-between;
+      font-size: 0.88rem;
+      color: var(--muted);
+    }
+    .footer-inner a { color: var(--slate); }
+    .meta-foot {
+      margin-top: 18px;
+      max-width: var(--content-max);
+      padding: 0 28px;
+      margin-left: auto; margin-right: auto;
+      font-size: 0.82rem;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    /* Reduced motion */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="site">
+  <div class="site-inner">
+    <a class="logo" href="https://qscoring.com">
+      <span class="logo-mark">Q</span>
+      <span>QScoring</span>
+    </a>
+    <nav class="site-nav" aria-label="Primary">
+      <a href="https://qscoring.com/research">Research</a>
+      <a href="https://qscoring.com/blog">Blog</a>
+      <a href="https://qscoring.com/methodology">Methodology</a>
+      <a href="https://qscoring.com/pricing">Pricing</a>
+    </nav>
+    <a class="cta" href="https://qscoring.com/signup">Try QScoring &rarr;</a>
+  </div>
+</header>
+
+<section class="hero">
+  <span class="eyebrow">Quantitative Research</span>
+  <h1 class="hero-title">How credit scoring models <span class="accent">actually</span> work.</h1>
+  <p class="deck">
+    Most explanations of credit scoring stop at "lenders look at your income and credit history." That's not wrong — it's just not useful. So we pulled 32,437 real loan applications, trained a working model, and looked at what the numbers actually say.
+  </p>
+  <div class="byline">
+    <span><strong>QScoring Research</strong></span>
+    <span class="dot"></span>
+    <span>May 21, 2026</span>
+    <span class="dot"></span>
+    <span>14 min read</span>
+  </div>
+</section>
+
+<section class="stats" aria-label="Headline statistics">
+  <div class="stat">
+    <div class="num">32,437</div>
+    <div class="label">Loan applications in the dataset, after cleaning</div>
+  </div>
+  <div class="stat">
+    <div class="num">21.9%</div>
+    <div class="label">Overall default rate across all applications</div>
+  </div>
+  <div class="stat">
+    <div class="num">0.871</div>
+    <div class="label">ROC AUC of the simple logistic regression model</div>
+  </div>
+  <div class="stat">
+    <div class="num">9.9&times;</div>
+    <div class="label">Default rate gap between best and worst loan grade</div>
+  </div>
+</section>
+
+<main class="article">
+
+  <p>If you've ever applied for a loan and been told "your application is in review," you've handed your data to a credit scoring model — almost certainly a flavor of logistic regression or gradient boosting wrapped in a UI. It looked at a handful of numbers about you and emitted a probability that you'd repay. That probability is what got you approved, declined, or quietly bumped to a higher interest rate.</p>
+
+  <p>The mechanics are not magic. They're also not the polished narrative that lenders publish on their FAQ pages. So instead of explaining what credit scoring models <em>say</em> they do, we trained one and looked at what it actually does.</p>
+
+  <p>The data: <a href="https://www.kaggle.com/datasets/laotse/credit-risk-dataset">Kaggle's <code>credit-risk-dataset</code></a>, which contains 32,581 anonymized loan applications. After dropping a handful of clearly-bad rows (ages above 80, a few income outliers) and filling in missing values, we were left with <strong>32,437 records</strong> — a meaningful sample with a real-world default rate of <strong>21.9%</strong>. That's higher than what major banks see because the dataset includes a chunk of subprime applicants, which is actually useful: we want a signal-rich population for modeling.</p>
+
+  <p>Here's what we found, ordered from weakest signal to strongest, ending with a working model.</p>
+
+  <h2>1. The lender's own grade is the single best published predictor</h2>
+
+  <p>Every loan in the dataset comes pre-tagged with a <code>loan_grade</code> from A (best) to G (worst), assigned by the originating lender's internal scoring system. It's tempting to treat grade as cheating — it's a model output, not a raw input. But it tells you something interesting: how good the lender's existing model is.</p>
+
+  <p>Spoiler: very good. The default rate by grade looks like this:</p>
+
+  <figure class="chart">
+    <div class="chart-card">
+      <img src="../assets/default_by_grade.png" alt="Bar chart showing default rate climbing from 10% for grade A loans to 98.4% for grade G loans">
+      <figcaption><strong>Figure 1.</strong> The default rate climbs from 10.0% for grade A to 98.4% for grade G. Roughly two-thirds of borrowers fall into the relatively safe A and B grades; the worst grades are small populations but spectacularly risky.</figcaption>
+    </div>
+  </figure>
+
+  <p>That's a <strong>9.9&times; lift</strong> in default rate between the lender's best and worst tier — and almost everything in the worst tier defaults. The takeaway isn't "use someone else's score." It's that <em>some signal exists, and a model can find it</em>. The interesting question is how much of that signal you can recover from raw features, without using the grade. We'll come back to that when we train the model.</p>
+
+  <h2>2. Where you live matters more than people admit</h2>
+
+  <p>Lenders are not allowed to discriminate based on a long list of protected characteristics, and housing-related variables sit close to that line. But "do you rent, own, or carry a mortgage" is on the application, and the data is unambiguous:</p>
+
+  <figure class="chart">
+    <div class="chart-card">
+      <img src="../assets/default_by_home.png" alt="Horizontal bar chart: renters default at 31.6%, mortgage holders 12.6%, outright owners 7.5%">
+      <figcaption><strong>Figure 2.</strong> Renters default on loans at <strong>31.6%</strong> — about <strong>4.2&times;</strong> the rate of outright homeowners (7.5%) and 2.5&times; the rate of mortgage holders (12.6%).</figcaption>
+    </div>
+  </figure>
+
+  <p>The mortgage-holder effect is the interesting one. A mortgage payment is, by definition, a large recurring liability — naively, you'd expect more defaults among mortgage holders, not fewer. The model picks up the inverse because <em>survivorship</em>: people who've already qualified for a mortgage have already passed someone else's credit screen. The variable is a proxy for "the financial system has previously vouched for this person."</p>
+
+  <p>Renting, by contrast, is a near-universal state for younger applicants and lower-income workers. The variable doesn't punish renters — it captures everything that "I rent" tends to correlate with: less savings, less stable employment, less prior credit history. The lender doesn't care which of those is causal. The model doesn't care either.</p>
+
+  <h2>3. Why you're borrowing matters more than how much</h2>
+
+  <figure class="chart">
+    <div class="chart-card">
+      <img src="../assets/default_by_intent.png" alt="Horizontal bar chart showing default rates by loan intent">
+      <figcaption><strong>Figure 3.</strong> Default rates range from <strong>14.9%</strong> on venture loans up to <strong>28.7%</strong> on debt consolidation loans. The intent label captures a lot of context the dollar amount can't.</figcaption>
+    </div>
+  </figure>
+
+  <p>"What is the loan for?" is a free-form question on most applications, but lenders bucket the answer. The buckets are predictive in a way that makes intuitive sense once you see it:</p>
+
+  <ul>
+    <li><strong>Debt consolidation (28.7% default)</strong> &mdash; the borrower is already in distress. The new loan is a coping mechanism, not an investment.</li>
+    <li><strong>Medical (26.7%)</strong> &mdash; usually unplanned, often correlated with income disruption from illness.</li>
+    <li><strong>Home improvement (26.2%)</strong> &mdash; surprisingly risky. Many home-improvement loans go to financially-stretched homeowners deferring problems.</li>
+    <li><strong>Venture (14.9%)</strong> &mdash; the safest category. Counterintuitive, but the people who get approved for venture loans are heavily pre-screened.</li>
+  </ul>
+
+  <div class="pull">
+    The cheap-and-cheerful signal isn't <em>how much</em> the borrower wants. It's <em>why</em>.
+  </div>
+
+  <h2>4. Income, by itself, is misleading</h2>
+
+  <p>Income is the variable everyone <em>thinks</em> should be the most important one. It isn't.</p>
+
+  <figure class="chart">
+    <div class="chart-card">
+      <img src="../assets/income_distribution.png" alt="Two overlapping density curves of income for repaid vs defaulted loans showing significant overlap">
+      <figcaption><strong>Figure 4.</strong> Defaulters skew lower-income, but the distributions overlap heavily. Plenty of $40k-earners repay on time; plenty of $90k-earners default. Income alone is a weak predictor.</figcaption>
+    </div>
+  </figure>
+
+  <p>If you draw a line at the median income ($55,000) and predict "everyone above repays, everyone below defaults," you'd be wrong nearly half the time. The reason income looks important in lender narratives is that it appears in <em>combinations</em> — specifically, in the ratio of loan size to income, which is much more interesting.</p>
+
+  <h2>5. Loan-to-income ratio is the single strongest raw signal</h2>
+
+  <p>This is the signal that surprises people. The total loan amount doesn't matter much in isolation. Neither does income. But the ratio — the percentage of your annual income represented by the loan — separates good and bad loans almost as well as the lender's full grade does:</p>
+
+  <figure class="chart">
+    <div class="chart-card">
+      <img src="../assets/default_by_lti.png" alt="Bar chart showing default rate increasing with loan-to-income ratio, from 10% under 5% to 78.6% above 50%">
+      <figcaption><strong>Figure 5.</strong> Loan-to-income ratio: under 5% of income, defaults run 10.2%. Once the loan exceeds 30% of annual income, default rates jump to <strong>69.7%</strong>. Above 50%, it's <strong>78.6%</strong>.</figcaption>
+    </div>
+  </figure>
+
+  <p>The discontinuity around 30% is striking. It's also financially intuitive: a loan worth 30%+ of annual income usually means the monthly payment is a non-trivial fraction of monthly take-home pay. Combined with rent, food, healthcare, and existing debt, that load is mathematically hard to carry. The model doesn't need to "understand" this; it just sees the historical data and weights the ratio heavily.</p>
+
+  <div class="callout">
+    <div class="title"><span class="badge">Methodology</span> What we're not modeling</div>
+    This dataset doesn't include some of the strongest real-world predictors: credit utilization, recent delinquencies, hard inquiries in the last 12 months, employment verification, or debt-to-income across <em>all</em> debts (not just this loan). Real production credit models from the major bureaus use these and dozens more. Our model below uses 11 features and still gets to AUC 0.87, which is a useful proof of the basic mechanics — not a replacement for a real scorecard.
+  </div>
+
+  <h2>Building a working credit scoring model</h2>
+
+  <p>With the patterns in hand, we trained a baseline model. The setup:</p>
+
+  <ul>
+    <li><strong>Algorithm:</strong> Logistic regression with L2 regularization, balanced class weights. Boring on purpose — this is the model class regulators are most comfortable with, because every coefficient has a direct interpretation.</li>
+    <li><strong>Features:</strong> Age, income, employment length, loan amount, interest rate, loan-to-income ratio, credit history length, plus one-hot encoded categoricals (home ownership, loan intent, loan grade, prior default flag).</li>
+    <li><strong>Split:</strong> 75% train / 25% held-out test, stratified on the target.</li>
+    <li><strong>Threshold:</strong> 0.5 for binary classification (this is the lever lenders actually tune for portfolio risk).</li>
+  </ul>
+
+  <p>Results on the held-out 8,110 applications:</p>
+
+  <div class="metrics-grid">
+    <div class="metric"><div class="v">0.871</div><div class="k">ROC AUC</div></div>
+    <div class="metric"><div class="v">80.5%</div><div class="k">Accuracy</div></div>
+    <div class="metric"><div class="v">77.6%</div><div class="k">Recall (defaults caught)</div></div>
+    <div class="metric"><div class="v">53.8%</div><div class="k">Precision</div></div>
+  </div>
+
+  <p>Read those numbers carefully, because they tell the actual story.</p>
+
+  <figure class="chart">
+    <div class="chart-card">
+      <img src="../assets/roc_curve.png" alt="ROC curve well above the diagonal with AUC 0.871">
+      <figcaption><strong>Figure 6.</strong> The ROC curve sits well above the diagonal. AUC of 0.871 means: for any randomly-chosen defaulter and any randomly-chosen non-defaulter, the model assigns the defaulter a higher risk score 87% of the time.</figcaption>
+    </div>
+  </figure>
+
+  <p><strong>Recall of 77.6%</strong> means the model catches more than three-quarters of the people who will actually default. That's good. <strong>Precision of 53.8%</strong> means that of everyone the model <em>flags</em> as risky, about half actually default — the other half are false positives.</p>
+
+  <p>This precision/recall tradeoff is the entire game in credit scoring. Tilt the threshold one way and you approve more good borrowers but eat more losses. Tilt it the other way and your loss rate drops but you reject creditworthy people. Every lender chooses where on that curve to operate, based on their cost of capital and their tolerance for charge-offs. The model doesn't make that choice; a product manager does.</p>
+
+  <figure class="chart">
+    <div class="chart-card">
+      <img src="../assets/confusion_matrix.png" alt="Confusion matrix: 5152 true negatives, 1184 false positives, 397 false negatives, 1377 true positives">
+      <figcaption><strong>Figure 7.</strong> Confusion matrix at the default threshold. The 1,184 false positives — borrowers flagged risky who would have repaid — are the lender's opportunity cost. The 397 false negatives are the actual losses.</figcaption>
+    </div>
+  </figure>
+
+  <h2>What the model actually weights</h2>
+
+  <p>Because we used logistic regression on standardized features, the coefficients have a clean meaning: each one is the change in log-odds of default per one-standard-deviation move in that feature, holding the others constant. Positive coefficients raise the model's risk estimate; negative coefficients lower it.</p>
+
+  <figure class="chart">
+    <div class="chart-card">
+      <img src="../assets/feature_importance.png" alt="Bar chart of standardized logistic regression coefficients showing loan_percent_income as the biggest positive driver">
+      <figcaption><strong>Figure 8.</strong> Standardized coefficients. <span style="color:var(--danger);">Red = raises risk</span>, <span style="color:var(--safe);">green = lowers risk</span>. Loan-to-income ratio dominates everything else.</figcaption>
+    </div>
+  </figure>
+
+  <p>The top risk-raising features:</p>
+  <ul>
+    <li><code>loan_percent_income</code> (+1.38) — by a wide margin, the strongest driver.</li>
+    <li><code>loan_grade_D</code> (+0.75) and <code>loan_grade_E</code> (+0.46) — being in a worse credit tier compounds risk.</li>
+    <li><code>person_home_ownership_RENT</code> (+0.34) — renting, after controlling for income and grade, still raises risk.</li>
+  </ul>
+
+  <p>The top risk-lowering features:</p>
+  <ul>
+    <li><code>loan_amnt</code> (&minus;0.68) — interesting. Larger absolute loan amounts <em>reduce</em> predicted risk, holding everything else constant. The reason: bigger loans go to better-screened borrowers, and the ratio variable already absorbs the affordability signal.</li>
+    <li><code>person_home_ownership_OWN</code> (&minus;0.45) — outright ownership materially de-risks the application.</li>
+    <li><code>loan_intent_VENTURE</code> (&minus;0.38) and <code>loan_intent_EDUCATION</code> (&minus;0.24) — purpose matters, and the model agrees with the raw data.</li>
+  </ul>
+
+  <div class="pull">
+    A good scoring model isn't one that finds the single perfect feature. It's one that finds the right <em>combinations</em>.
+  </div>
+
+  <h2>The five rules that fall out of the data</h2>
+
+  <p>If you wanted to summarize what a working credit model has learned — in language a borrower would actually understand — it comes down to five rules:</p>
+
+  <ol>
+    <li><strong>The ratio matters, not the amount.</strong> A $20,000 loan against a $90,000 income is safer than a $5,000 loan against a $15,000 income. Lenders care about what fraction of your year the loan represents.</li>
+    <li><strong>The lender's own grade is mostly right.</strong> If you've been graded D or worse, the model is going to start from a position of skepticism — and the historical data agrees with that skepticism more often than not.</li>
+    <li><strong>Housing is a wealth proxy.</strong> Owning outright or carrying a mortgage signals that someone else has already vouched for your finances. The model treats it that way.</li>
+    <li><strong>Purpose is a tell.</strong> Loans for debt consolidation, medical bills, and home improvement default at meaningfully higher rates than loans for ventures or education. The reason isn't moral; it's that the purpose correlates with the borrower's current financial state.</li>
+    <li><strong>Income, in isolation, is noise.</strong> It only becomes a meaningful signal in combination with other variables — most importantly, the size of the loan.</li>
+  </ol>
+
+  <h2>So why does any of this matter for an investor?</h2>
+
+  <p>QScoring isn't a credit bureau. We score equities, not borrowers. But the modeling discipline is the same one: take a noisy population (companies instead of applicants), extract a handful of features that actually predict the outcome you care about (forward returns instead of defaults), and resist the temptation to over-engineer.</p>
+
+  <p>The lesson from credit scoring that we apply to equity scoring: <strong>simple linear models built on the right features beat complex models built on the wrong ones.</strong> The credit model above uses 11 features and a logistic regression and gets 87% AUC. A neural network on the same data, in our testing, gets to about 0.89 — marginally better, completely uninterpretable, and harder to defend in a regulated context.</p>
+
+  <p>For equity scoring the same principle holds. We've spent more time choosing the features than choosing the algorithm. If you're curious about which features we use and what their forward-return information coefficients look like, that's <a href="https://qscoring.com/methodology">on the methodology page</a> — with the same level of disclosure you just read above.</p>
+
+  <div class="cta-card">
+    <h3>See the same modeling discipline applied to stocks.</h3>
+    <p>QScoring rates every U.S.-listed equity on the same features that institutional quants actually use — disclosed, ranked, and updated daily. No black boxes.</p>
+    <a class="cta" href="https://qscoring.com/signup">Open a free account &rarr;</a>
+  </div>
+
+</main>
+
+<aside class="meta-foot">
+  <p><strong>Reproducibility.</strong> All analysis in this post is reproducible from <code>analysis/credit_scoring_breakdown.py</code> using the publicly available <a href="https://www.kaggle.com/datasets/laotse/credit-risk-dataset">laotse/credit-risk-dataset</a> from Kaggle (CC0 license). Model trained with scikit-learn 1.8.0 on Python 3.13. Train/test split is seeded (<code>random_state=42</code>) for exact reproduction.</p>
+  <p><strong>Disclosures.</strong> This article is for educational purposes. It is not a credit application service, and the model described here is a teaching example — not a production scorecard. QScoring's commercial products score publicly traded securities, not consumer credit.</p>
+</aside>
+
+<footer class="site">
+  <div class="footer-inner">
+    <div>&copy; 2026 QScoring &middot; Quantitative research for individual investors</div>
+    <div>
+      <a href="https://qscoring.com/methodology">Methodology</a> &middot;
+      <a href="https://qscoring.com/blog">Blog</a> &middot;
+      <a href="https://qscoring.com/contact">Contact</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
