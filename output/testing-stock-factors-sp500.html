@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Do Stock Factors Actually Work? Testing Momentum, Low Volatility, and Reversal on 5 Years of S&amp;P 500 Data | QScoring</title>
+  <meta name="description" content="We tested three classic price-based factors on 619,040 days of S&P 500 data from 2013–2018: momentum, low volatility, and short-term reversal. Two worked weakly, one had the wrong sign. Here's what 5 years of real data tells us about factor investing.">
+  <meta name="author" content="QScoring Research">
+  <meta name="robots" content="index,follow,max-image-preview:large">
+  <link rel="canonical" href="https://qscoring.com/blog/testing-stock-factors-sp500">
+
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Do Stock Factors Actually Work? 5 Years of S&P 500 Data, Three Factors, Honest Results">
+  <meta property="og:description" content="619,040 days. 474 names. Momentum +3.9% annualized, low vol -6.4%, reversal +2.8%. None statistically significant.">
+  <meta property="og:url" content="https://qscoring.com/blog/testing-stock-factors-sp500">
+  <meta property="og:site_name" content="QScoring">
+  <meta property="og:image" content="https://qscoring.com/blog/testing-stock-factors-sp500/sp500_long_short_returns.png">
+  <meta property="article:published_time" content="2026-05-22T00:00:00Z">
+  <meta property="article:section" content="Quantitative Research">
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Do Stock Factors Actually Work?">
+  <meta name="twitter:description" content="5 years of S&P 500 data, three classic factors, honest empirical results.">
+  <meta name="twitter:image" content="https://qscoring.com/blog/testing-stock-factors-sp500/sp500_long_short_returns.png">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "Do Stock Factors Actually Work? Testing Momentum, Low Volatility, and Reversal on 5 Years of S&P 500 Data",
+    "description": "An empirical test of three classic price-based equity factors on 619,040 daily price rows across 474 S&P 500 stocks from 2013 to 2018.",
+    "image": "https://qscoring.com/blog/testing-stock-factors-sp500/sp500_long_short_returns.png",
+    "datePublished": "2026-05-22",
+    "dateModified": "2026-05-22",
+    "author": { "@type": "Organization", "name": "QScoring Research" },
+    "publisher": {
+      "@type": "Organization",
+      "name": "QScoring",
+      "url": "https://qscoring.com",
+      "logo": { "@type": "ImageObject", "url": "https://qscoring.com/logo.svg" }
+    },
+    "mainEntityOfPage": { "@type": "WebPage", "@id": "https://qscoring.com/blog/testing-stock-factors-sp500" }
+  }
+  </script>
+
+  <link rel="preconnect" href="https://rsms.me/">
+  <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+
+  <style>
+    :root {
+      --navy:        #0F172A;
+      --ink:         #1E293B;
+      --slate:       #334155;
+      --muted:       #64748B;
+      --line:        #E2E8F0;
+      --soft:        #F8FAFC;
+      --soft-2:      #F1F5F9;
+      --accent:      #D97706;
+      --accent-dark: #B45309;
+      --safe:        #059669;
+      --danger:      #DC2626;
+      --paper:       #FFFFFF;
+      --content-max: 720px;
+      --wide-max:   1080px;
+      --text-base: clamp(1.02rem, 0.96rem + 0.3vw, 1.13rem);
+      --text-lg:   clamp(1.18rem, 1.06rem + 0.5vw, 1.32rem);
+      --text-2xl:  clamp(1.8rem, 1.4rem + 1.6vw, 2.4rem);
+      --text-hero: clamp(2.4rem, 1.6rem + 3.4vw, 4.2rem);
+      --space-section: clamp(3.5rem, 2rem + 4vw, 6rem);
+      --radius:    14px;
+      --radius-lg: 22px;
+      --shadow:    0 6px 28px -10px rgba(15,23,42,0.18), 0 2px 6px rgba(15,23,42,0.05);
+      --shadow-lg: 0 30px 60px -30px rgba(15,23,42,0.35), 0 6px 16px -8px rgba(15,23,42,0.12);
+      --ease: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body { margin: 0; background: var(--paper); color: var(--ink);
+      font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+      font-feature-settings: 'cv11', 'ss01', 'ss03';
+      font-size: var(--text-base); line-height: 1.65;
+      -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+    a { color: var(--accent); text-decoration: none; transition: color 150ms var(--ease); }
+    a:hover { color: var(--accent-dark); text-decoration: underline; text-underline-offset: 3px; }
+
+    header.site { position: sticky; top: 0; z-index: 30;
+      background: rgba(255,255,255,0.85);
+      backdrop-filter: saturate(180%) blur(14px);
+      -webkit-backdrop-filter: saturate(180%) blur(14px);
+      border-bottom: 1px solid var(--line); }
+    .site-inner { max-width: var(--wide-max); margin: 0 auto; padding: 14px 28px;
+      display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+    .logo { display: inline-flex; align-items: center; gap: 10px; color: var(--navy);
+      font-weight: 700; letter-spacing: -0.02em; font-size: 1.06rem; }
+    .logo-mark { width: 30px; height: 30px; border-radius: 8px;
+      background: linear-gradient(135deg, #0F172A 0%, #D97706 100%);
+      display: grid; place-items: center; color: #fff; font-weight: 800;
+      font-size: 0.9rem; letter-spacing: -0.04em;
+      box-shadow: 0 4px 14px -4px rgba(217,119,6,0.55); }
+    nav.site-nav { display: flex; gap: 26px; font-size: 0.94rem; color: var(--slate); }
+    nav.site-nav a { color: var(--slate); }
+    nav.site-nav a:hover { color: var(--navy); text-decoration: none; }
+    .cta { display: inline-flex; align-items: center; gap: 8px;
+      padding: 9px 16px; border-radius: 999px;
+      background: var(--navy); color: #fff !important;
+      font-weight: 600; font-size: 0.92rem;
+      transition: transform 180ms var(--ease), background 180ms var(--ease); }
+    .cta:hover { background: var(--accent); transform: translateY(-1px); text-decoration: none; }
+    @media (max-width: 720px) { nav.site-nav { display: none; } }
+
+    .hero { max-width: var(--wide-max); margin: 0 auto; padding: clamp(3rem, 2rem + 4vw, 6rem) 28px 2rem; }
+    .eyebrow { display: inline-flex; align-items: center; gap: 10px;
+      font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.16em;
+      color: var(--accent); font-weight: 600; }
+    .eyebrow::before { content: ""; width: 28px; height: 1px; background: var(--accent); }
+    h1.hero-title { margin: 18px 0 18px;
+      font-size: var(--text-hero); line-height: 1.04;
+      letter-spacing: -0.035em; color: var(--navy);
+      font-weight: 800; max-width: 20ch; }
+    h1.hero-title .accent { color: var(--accent); }
+    .deck { max-width: 60ch; font-size: var(--text-lg);
+      color: var(--slate); line-height: 1.5; }
+    .byline { margin-top: 36px; display: flex; align-items: center; gap: 14px;
+      font-size: 0.92rem; color: var(--muted); }
+    .byline .dot { width: 4px; height: 4px; border-radius: 50%; background: var(--muted); }
+    .byline strong { color: var(--ink); font-weight: 600; }
+
+    .stats { max-width: var(--wide-max); margin: 2.5rem auto 0; padding: 0 28px;
+      display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+    .stat { padding: 22px 22px; border-radius: var(--radius);
+      background: var(--soft); border: 1px solid var(--line);
+      transition: transform 200ms var(--ease), box-shadow 200ms var(--ease), border-color 200ms var(--ease); }
+    .stat:hover { transform: translateY(-2px); box-shadow: var(--shadow); border-color: #CBD5E1; }
+    .stat .num { font-size: clamp(1.7rem, 1.2rem + 1.4vw, 2.4rem); font-weight: 800;
+      color: var(--navy); letter-spacing: -0.03em; line-height: 1; }
+    .stat .label { margin-top: 8px; font-size: 0.86rem; color: var(--muted); line-height: 1.4; }
+    @media (max-width: 720px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+
+    main.article { max-width: var(--content-max); margin: 0 auto; padding: var(--space-section) 28px 4rem; }
+    main.article > * + * { margin-top: 1.1em; }
+    main.article h2 { margin: 3.4rem 0 1rem; font-size: var(--text-2xl);
+      color: var(--navy); letter-spacing: -0.025em; line-height: 1.15; font-weight: 800; }
+    main.article h2::before { content: ""; display: block; width: 44px; height: 3px;
+      background: var(--accent); margin-bottom: 18px; border-radius: 2px; }
+    main.article p { color: var(--ink); }
+    main.article p code, main.article li code {
+      background: var(--soft-2); color: var(--accent-dark);
+      padding: 2px 6px; border-radius: 5px; font-size: 0.9em;
+      font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace; }
+    main.article strong { color: var(--navy); font-weight: 700; }
+    main.article ul { padding-left: 1.3rem; }
+    main.article li + li { margin-top: 0.4em; }
+    main.article table { width: 100%; border-collapse: collapse; margin: 1.6rem 0; font-size: 0.92rem; }
+    main.article th, main.article td { padding: 10px 14px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    main.article th { color: var(--navy); font-weight: 700; }
+
+    .pull { margin: 2.8rem 0; padding: 1.6rem 0 1.6rem 1.8rem;
+      border-left: 3px solid var(--accent);
+      font-size: clamp(1.15rem, 0.9rem + 1vw, 1.5rem);
+      line-height: 1.4; color: var(--navy); font-weight: 600;
+      letter-spacing: -0.015em; }
+
+    figure.chart { margin: 2.6rem -28px; background: var(--paper); }
+    figure.chart .chart-card { border-radius: var(--radius-lg);
+      border: 1px solid var(--line);
+      background: radial-gradient(120% 80% at 0% 0%, rgba(217,119,6,0.05), transparent 60%), var(--paper);
+      padding: 26px 26px 18px; box-shadow: var(--shadow); }
+    figure.chart img { display: block; width: 100%; height: auto; border-radius: 10px; }
+    figure.chart figcaption { margin-top: 14px; font-size: 0.88rem;
+      color: var(--muted); line-height: 1.5; }
+    figure.chart figcaption strong { color: var(--ink); font-weight: 600; }
+    @media (min-width: 900px) { figure.chart { margin: 3rem -120px; } }
+
+    .callout { margin: 2.4rem 0; padding: 22px 24px;
+      background: linear-gradient(135deg, rgba(217,119,6,0.06), rgba(217,119,6,0.02));
+      border: 1px solid rgba(217,119,6,0.18); border-radius: var(--radius);
+      font-size: 0.97rem; color: var(--slate); }
+    .callout .title { display: flex; align-items: center; gap: 10px;
+      font-weight: 700; color: var(--navy);
+      margin-bottom: 6px; font-size: 0.95rem; letter-spacing: 0.01em; }
+    .callout .title .badge { font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase;
+      padding: 3px 8px; background: var(--accent); color: #fff;
+      border-radius: 4px; font-weight: 700; }
+
+    .metrics-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 2rem 0 1.4rem; }
+    .metric { padding: 18px 18px; border-radius: var(--radius); background: var(--navy); color: #fff; }
+    .metric .v { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; }
+    .metric .k { margin-top: 6px; font-size: 0.78rem; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255,255,255,0.7); }
+    @media (max-width: 600px) { .metrics-grid { grid-template-columns: repeat(2, 1fr); } }
+
+    .cta-card { margin: 4rem -28px 0; padding: 38px 32px;
+      border-radius: var(--radius-lg);
+      background: radial-gradient(70% 100% at 100% 0%, rgba(217,119,6,0.55) 0%, rgba(15,23,42,0) 60%),
+        linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+      color: #fff; box-shadow: var(--shadow-lg); position: relative; overflow: hidden; }
+    .cta-card::after { content: ""; position: absolute; inset: auto -40px -60px auto;
+      width: 220px; height: 220px;
+      background: radial-gradient(closest-side, rgba(217,119,6,0.35), transparent 70%);
+      pointer-events: none; }
+    .cta-card h3 { margin: 0 0 8px; color: #fff;
+      font-size: clamp(1.4rem, 1.1rem + 1vw, 1.9rem);
+      letter-spacing: -0.02em; line-height: 1.2; font-weight: 800; }
+    .cta-card p { margin: 0 0 22px; color: rgba(255,255,255,0.78); max-width: 56ch; }
+    .cta-card .cta { background: var(--accent); color: #fff !important; }
+    .cta-card .cta:hover { background: #FBBF24; color: var(--navy) !important; }
+    @media (min-width: 900px) { .cta-card { margin: 4rem -120px 0; } }
+
+    footer.site { margin-top: 4rem; padding: 36px 28px 56px; border-top: 1px solid var(--line); background: var(--soft); }
+    .footer-inner { max-width: var(--wide-max); margin: 0 auto; display: flex; flex-wrap: wrap; gap: 18px; justify-content: space-between; font-size: 0.88rem; color: var(--muted); }
+    .footer-inner a { color: var(--slate); }
+    .meta-foot { margin-top: 18px; max-width: var(--content-max); padding: 0 28px; margin-left: auto; margin-right: auto; font-size: 0.82rem; color: var(--muted); line-height: 1.6; }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; } }
+  </style>
+</head>
+<body>
+
+<header class="site">
+  <div class="site-inner">
+    <a class="logo" href="https://qscoring.com">
+      <span class="logo-mark">Q</span>
+      <span>QScoring</span>
+    </a>
+    <nav class="site-nav" aria-label="Primary">
+      <a href="https://qscoring.com/research">Research</a>
+      <a href="https://qscoring.com/blog">Blog</a>
+      <a href="https://qscoring.com/methodology">Methodology</a>
+      <a href="https://qscoring.com/pricing">Pricing</a>
+    </nav>
+    <a class="cta" href="https://qscoring.com/signup">Try QScoring &rarr;</a>
+  </div>
+</header>
+
+<section class="hero">
+  <span class="eyebrow">Quantitative Research</span>
+  <h1 class="hero-title">Do stock factors <span class="accent">actually work?</span></h1>
+  <p class="deck">
+    We took five years of daily S&amp;P 500 data, computed three of the most-cited price-based factors in academic finance, and ran honest cross-sectional tests. Two factors worked weakly. One had the wrong sign. None were statistically significant. Here&apos;s why that matters — and what the QScoring methodology does about it.
+  </p>
+  <div class="byline">
+    <span><strong>QScoring Research</strong></span>
+    <span class="dot"></span>
+    <span>May 22, 2026</span>
+    <span class="dot"></span>
+    <span>15 min read</span>
+  </div>
+</section>
+
+<section class="stats" aria-label="Headline statistics">
+  <div class="stat">
+    <div class="num">619,040</div>
+    <div class="label">Daily price rows across 474 names with full history</div>
+  </div>
+  <div class="stat">
+    <div class="num">5 yrs</div>
+    <div class="label">Test window: 2013-02-08 → 2018-02-07</div>
+  </div>
+  <div class="stat">
+    <div class="num">+91%</div>
+    <div class="label">Equal-weighted S&amp;P 500 total return over the period</div>
+  </div>
+  <div class="stat">
+    <div class="num">0 / 3</div>
+    <div class="label">Factors with statistically significant IC (t-stat &gt; 2)</div>
+  </div>
+</section>
+
+<main class="article">
+
+  <p>The previous three posts in this series — on <a href="how-credit-scoring-models-actually-work.html">credit risk</a>, <a href="predicting-loan-defaults.html">loan defaults</a>, and <a href="detecting-credit-card-fraud.html">credit card fraud</a> — were all about classification on binary outcomes. They were also explicitly setting up a different kind of test: <em>can we apply the same evidence-first discipline to equity scoring, which is QScoring&apos;s actual job?</em></p>
+
+  <p>This post answers that question on real data. We pulled the <a href="https://www.kaggle.com/datasets/camnugent/sandp500">camnugent/sandp500</a> Kaggle dataset — 619,040 daily price rows across all 505 S&amp;P 500 constituents from February 2013 to February 2018 — and ran a clean cross-sectional factor test on the 474 names with full price history.</p>
+
+  <p>Three price-based factors. Five years of data. Monthly cross-sectional ranks. Long-short quintile portfolios. Information coefficients with t-statistics. All gross of costs and computed without look-ahead. <strong>The results are not as clean as the academic literature suggests.</strong></p>
+
+  <h2>1. What we&apos;re testing and how</h2>
+
+  <p>With price-only data we can&apos;t compute true fundamental-value factors like price-to-earnings or price-to-book — those require financial-statement data the Kaggle file doesn&apos;t carry. What we <em>can</em> compute, cleanly and without ambiguity, are the three classic price-based factors:</p>
+
+  <ul>
+    <li>
+      <strong>Momentum (12-1)</strong> — the trailing 12 months of return, excluding the most recent month. This is the canonical Jegadeesh–Titman construction from 1993, folded into Carhart&apos;s four-factor model in 1997 as the <em>WML</em> (winners-minus-losers) factor.
+    </li>
+    <li>
+      <strong>Low volatility</strong> — the trailing 60-day realized volatility of daily returns, with sign flipped so high score = low vol. The low-vol anomaly was popularized by Frazzini and Pedersen&apos;s 2014 paper &ldquo;Betting Against Beta.&rdquo;
+    </li>
+    <li>
+      <strong>Short-term reversal</strong> — the prior-month return, sign-flipped (losers ranked highest). De Bondt and Thaler 1985 and its modern monthly version. The behavioral story is that short-term moves overshoot and then mean-revert.
+    </li>
+  </ul>
+
+  <p>For each factor and each month <code>t</code>:</p>
+
+  <ol>
+    <li>Compute the factor score using data <em>through</em> month <code>t</code> (no peeking at <code>t+1</code>).</li>
+    <li>Compute the cross-sectional <strong>Information Coefficient</strong> — Spearman rank correlation between factor at <code>t</code> and forward 1-month return at <code>t+1</code>. IC is the equity-research equivalent of PR-AUC in classification: it measures rank quality where you actually operate.</li>
+    <li>Sort the cross-section into 5 equal-weighted quintile portfolios. Hold for one month. Repeat.</li>
+    <li>Compute the long-short portfolio: top quintile minus bottom quintile.</li>
+  </ol>
+
+  <h2>2. The market backdrop</h2>
+
+  <p>Before looking at factors, it helps to know what the market did:</p>
+
+  <figure class="chart">
+    <div class="chart-card">
+      <img src="../assets/sp500_market_overview.png" alt="Cumulative growth of equal-weighted S&P 500 plus AAPL, XOM, KO over 2013-2018 showing strong bull market">
+      <figcaption><strong>Figure 1.</strong> Equal-weighted S&amp;P 500 (gold) compounded to <strong>1.91&times;</strong> over the 5-year window — about <strong>+91% total return, +14% annualized</strong>. This was a quintessential post-QE bull market: low rates, high multiples, narrow drawdowns. The interesting question for factor testing isn&apos;t whether stocks made money — they did, broadly — but whether <em>which</em> stocks they were could be predicted.</figcaption>
+    </div>
+  </figure>
+
+  <p>The monthly-return cross-section is also worth eyeballing:</p>
+
+  <figure class="chart">
+    <div class="chart-card">
+      <img src="../assets/sp500_monthly_returns.png" alt="Histogram of all monthly returns across all S&P 500 names showing fat-tailed distribution centered slightly above zero">
+      <figcaption><strong>Figure 2.</strong> Pooled monthly returns across all 474 names &times; 61 months &asymp; 29,000 observations. Median monthly return: <strong>+1.4%</strong>. Mean: <strong>+1.3%</strong>. The distribution is fat-tailed on both sides — many stocks deliver &plusmn;5%+ moves in a typical month. That cross-sectional dispersion is the raw material a factor needs to work with.</figcaption>
+    </div>
+  </figure>
+
+  <h2>3. Information coefficients — the headline metric</h2>
+
+  <p>The IC time series for the three factors:</p>
+
+  <figure class="chart">
+    <div class="chart-card">
+      <img src="../assets/sp500_ic_time_series.png" alt="Three IC time series showing all three factors hovering around zero with noisy monthly variation">
+      <figcaption><strong>Figure 3.</strong> Cross-sectional Spearman IC by month (thin lines) and 6-month rolling averages (bold). Mean ICs: momentum <strong>+0.016</strong>, low vol <strong>&minus;0.020</strong>, short-term reversal <strong>+0.019</strong>. The literature considers ICs in the 0.03–0.05 range &ldquo;weakly informative&rdquo;; all three of our factors are below that bar on a 5-year window. None of the t-statistics exceed 2.</figcaption>
+    </div>
+  </figure>
+
+  <p>Read those numbers carefully. Two factors (momentum, short-term reversal) had IC of the expected sign — positive — but the magnitudes are small and the variability across months is huge. The third factor (low volatility) had IC of the <em>wrong sign</em>: high-vol stocks outperformed low-vol stocks in this period, on average.</p>
+
+  <p>That last finding isn&apos;t a coding bug. It&apos;s a well-documented feature of the 2013–2018 environment: in a zero-interest-rate, QE-driven bull market, high-beta and high-growth names dominated. The low-volatility anomaly that worked decades earlier was structurally fighting the regime.</p>
+
+  <h2>4. Quintile portfolios — momentum is the most well-behaved</h2>
+
+  <p>IC summarizes the rank correlation. Quintile portfolios show what actually happens when you act on that ranking. Here&apos;s momentum:</p>
+
+  <figure class="chart">
+    <div class="chart-card">
+      <img src="../assets/sp500_momentum_quintiles.png" alt="Five lines showing cumulative growth of momentum quintile portfolios — Q5 (highest momentum) reaches 1.75x by 2018, Q1 reaches 1.41x">
+      <figcaption><strong>Figure 4.</strong> Equal-weighted momentum quintile portfolios, rebalanced monthly. Q1 (worst momentum) grew 1.41&times;; Q5 (best momentum) grew <strong>1.75&times;</strong> — a 33-percentage-point cumulative spread. The middle quintiles aren&apos;t perfectly monotonic (Q4 dips below Q3), but the top-vs-bottom spread is the direction the literature predicts.</figcaption>
+    </div>
+  </figure>
+
+  <p>That said: a 33pp spread over 4+ years is not a lot. The equal-weighted S&amp;P 500 returned 91% over the same window. The quintile spread is just over a third of the broad market&apos;s total return.</p>
+
+  <h2>5. Long-short returns — the operational view</h2>
+
+  <p>A long-short portfolio buys the top quintile and shorts the bottom quintile. It&apos;s the cleanest test of whether the factor carries real signal, because it strips out the market beta — what&apos;s left is pure factor return.</p>
+
+  <figure class="chart">
+    <div class="chart-card">
+      <img src="../assets/sp500_long_short_returns.png" alt="Cumulative long-short returns for momentum (positive), short-term reversal (positive), and low volatility (negative)">
+      <figcaption><strong>Figure 5.</strong> Long-short cumulative returns. Momentum compounded <strong>+21%</strong> gross over 5 years (+3.9% annualized). Short-term reversal: <strong>+14%</strong> (+2.8% annualized). Low volatility: <strong>&minus;28%</strong> (&minus;6.4% annualized) — high-vol names beat low-vol names every year of this period.</figcaption>
+    </div>
+  </figure>
+
+  <p>Headline summary in a table:</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Factor</th>
+        <th>Mean IC</th>
+        <th>IC t-stat</th>
+        <th>Ann. return</th>
+        <th>Ann. Sharpe</th>
+        <th>Max drawdown</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Momentum (12-1)</strong></td>
+        <td>+0.016</td>
+        <td>+0.53</td>
+        <td>+3.9%</td>
+        <td>0.35</td>
+        <td>&minus;24.2%</td>
+      </tr>
+      <tr>
+        <td><strong>Short-term reversal</strong></td>
+        <td>+0.019</td>
+        <td>+1.04</td>
+        <td>+2.8%</td>
+        <td>0.36</td>
+        <td>&minus;7.3%</td>
+      </tr>
+      <tr>
+        <td><strong>Low volatility</strong></td>
+        <td>&minus;0.020</td>
+        <td>&minus;0.82</td>
+        <td>&minus;6.4%</td>
+        <td>&minus;0.51</td>
+        <td>&minus;22.8%</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>Two observations:</p>
+
+  <ul>
+    <li><strong>Sharpe ratios are modest at best.</strong> The single-factor Sharpe of 0.35 on momentum is well below what you&apos;d need to fund a fund — typical institutional targets are above 1.0 net of costs.</li>
+    <li><strong>Short-term reversal had the cleanest risk profile</strong> by a wide margin — max drawdown of just 7.3% vs 22–24% for the other two. The cumulative return was small, but the path was smooth.</li>
+  </ul>
+
+  <figure class="chart">
+    <div class="chart-card">
+      <img src="../assets/sp500_factor_sharpe.png" alt="Bar chart of annualized Sharpe ratios: momentum +0.35, low vol -0.51, short-term reversal +0.36">
+      <figcaption><strong>Figure 6.</strong> Annualized Sharpe ratios. Low volatility&apos;s &minus;0.51 isn&apos;t just &ldquo;factor didn&apos;t work&rdquo; — it&apos;s &ldquo;factor worked in reverse,&rdquo; statistically indistinguishable from zero but consistently wrong-signed.</figcaption>
+    </div>
+  </figure>
+
+  <h2>6. Drawdowns — factors are not free lunches</h2>
+
+  <figure class="chart">
+    <div class="chart-card">
+      <img src="../assets/sp500_factor_drawdowns.png" alt="Drawdown chart showing all three factors going through 20%+ drawdowns at various points">
+      <figcaption><strong>Figure 7.</strong> Drawdowns from peak. Momentum&apos;s 24% drawdown happened in early 2016 — the same period that classic &ldquo;momentum crash&rdquo; risk premia papers identify after sharp market dislocations. Low-vol grinds down continuously. Short-term reversal stays close to its peak the whole period.</figcaption>
+    </div>
+  </figure>
+
+  <p>If you ran any of these as a standalone strategy with real capital, you&apos;d need the discipline to hold through a 20%+ drawdown without changing your mind. Most investors can&apos;t. This is the soft constraint that makes factor investing harder in practice than in backtests.</p>
+
+  <h2>7. Are the factors independent?</h2>
+
+  <p>Combining factors into a composite score only makes sense if they carry distinct information. The correlation matrix:</p>
+
+  <figure class="chart">
+    <div class="chart-card">
+      <img src="../assets/sp500_factor_correlation.png" alt="Heatmap of correlations between the three long-short factor returns">
+      <figcaption><strong>Figure 8.</strong> Long-short return correlations. <strong>Momentum &times; Low Vol = +0.62</strong> (both lost out to the same high-vol names). <strong>Momentum &times; Reversal = &minus;0.30</strong> (opposite-horizon, expected). <strong>Low Vol &times; Reversal = &minus;0.38</strong>. The factors are not 3 independent bets — only the negative correlations suggest meaningful diversification benefit.</figcaption>
+    </div>
+  </figure>
+
+  <p>If you naively averaged the three factor signals into a composite score on 2013–2018, you&apos;d effectively be double-weighting &ldquo;don&apos;t buy high-vol names&rdquo; (the shared bet between momentum and low-vol) and only partially-cancelling that with the reversal signal. Composite scoring requires factor de-correlation, not just factor averaging.</p>
+
+  <h2>8. The honest conclusions</h2>
+
+  <p>Five years of S&amp;P 500 data is not enough to confidently say a factor &ldquo;works&rdquo; or &ldquo;doesn&apos;t.&rdquo;</p>
+
+  <p>The decades-long academic record on momentum is robust — but that record is built on ~100 years of data spanning multiple regimes. On any individual 5-year window, momentum can be flat, positive but weak, or even negative (the 2008–2009 momentum crash is famous). Our finding of &ldquo;positive but not significant&rdquo; over 2013–2018 is consistent with the long-run literature, not in conflict with it.</p>
+
+  <p>The low-volatility anomaly is structurally regime-dependent. It works when expensive low-vol stocks beat cheap high-vol ones — typically in slow-growth, risk-off environments. The 2013–2018 window was the opposite environment, and the anomaly inverted. The right read isn&apos;t &ldquo;low-vol is dead&rdquo; — it&apos;s &ldquo;low-vol has macro-regime exposure that long-term backtests average out.&rdquo;</p>
+
+  <p>Short-term reversal had a clean low-drawdown profile but only +2.8% annualized gross. Subtract realistic transaction costs (5–15 bps per month at high monthly turnover) and the return is plausibly negative net of costs.</p>
+
+  <div class="pull">
+    Five years is too short. Three uncorrelated factors are better than three correlated ones. Net-of-cost performance is the only kind that matters.
+  </div>
+
+  <h2>9. What QScoring does about this</h2>
+
+  <p>This post is, in a sense, the empirical justification for several specific choices in the QScoring methodology:</p>
+
+  <ul>
+    <li>
+      <strong>We don&apos;t rely on a single 5-year backtest.</strong> Factor validation uses the longest history we can construct per metric — typically decades — and we publish IC and quintile-spread numbers on the <a href="https://qscoring.com/methodology">methodology page</a> so users can see what the long-run evidence actually says, not just the in-sample fit.
+    </li>
+    <li>
+      <strong>We use five factor categories, not one.</strong> Value, growth, momentum, profitability, and risk. The factors are deliberately chosen for their long-run academic record <em>and</em> low pairwise correlation, so the composite isn&apos;t accidentally double-betting on the same underlying risk.
+    </li>
+    <li>
+      <strong>We sector-normalize.</strong> A &ldquo;cheap&rdquo; software company isn&apos;t cheap the same way a &ldquo;cheap&rdquo; bank is. Every factor is z-scored against the stock&apos;s sector before being combined into the composite. This addresses one of the silent reasons naive factor backtests look worse than they should.
+    </li>
+    <li>
+      <strong>We disclose the operational metric, not the vanity metric.</strong> Top-decile vs bottom-decile spread, annualized, against forward returns. That&apos;s the equity equivalent of the precision-at-top-K metric we argued for in our <a href="detecting-credit-card-fraud.html">fraud detection post</a>. R² and headline IC are sanity checks; the spread is what would have made or lost money.
+    </li>
+  </ul>
+
+  <p>The factor zoo problem in equity research — Cochrane&apos;s &ldquo;hundreds of significant factors discovered&rdquo; — is the same overfitting problem we warned about in the loan-default post. The honest fix is the same one: small, vetted feature set with a real empirical record, evaluated on the operational metric that actually matters.</p>
+
+  <div class="cta-card">
+    <h3>See real factor analysis applied to every U.S. stock.</h3>
+    <p>QScoring rates every U.S.-listed equity using the same evidence-first discipline you just read about — long-run factor validation, sector-normalized scoring, transparent IC and quintile-spread metrics. No black boxes.</p>
+    <a class="cta" href="https://qscoring.com/signup">Open a free account &rarr;</a>
+  </div>
+
+</main>
+
+<aside class="meta-foot">
+  <p><strong>Reproducibility.</strong> All analysis in this post is reproducible from <code>analysis/sp500_factor_test.py</code> using the publicly available <a href="https://www.kaggle.com/datasets/camnugent/sandp500">camnugent/sandp500</a> dataset. The test uses 474 of 505 tickers (those with ~full history over the 5-year window). All factors are computed using only data available at or before the formation date — no look-ahead. Pandas 3.0.3, scikit-learn 1.8.0, Python 3.13.</p>
+  <p><strong>Cost note.</strong> All factor returns reported here are <em>gross of transaction costs</em>. Monthly turnover for these strategies is high (typically 30–60% of the long and short books per rebalance). Realistic round-trip costs of 10–20 bps per dollar traded would reduce all three factor returns meaningfully. None of these results should be read as &ldquo;tradeable strategies as shown&rdquo; — they&apos;re factor diagnostics, not portfolio recommendations.</p>
+  <p><strong>Disclosures.</strong> This article is for educational purposes and is not investment advice. QScoring scores publicly traded equities and provides quantitative analysis; it does not manage capital or execute trades on behalf of users.</p>
+</aside>
+
+<footer class="site">
+  <div class="footer-inner">
+    <div>&copy; 2026 QScoring &middot; Quantitative research for individual investors</div>
+    <div>
+      <a href="https://qscoring.com/methodology">Methodology</a> &middot;
+      <a href="https://qscoring.com/blog">Blog</a> &middot;
+      <a href="https://qscoring.com/contact">Contact</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
