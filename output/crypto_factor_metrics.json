@@ -1,0 +1,61 @@
+{
+  "data": {
+    "n_rows_filtered": 1637134,
+    "n_tickers": 1050,
+    "date_start": "2020-01-01",
+    "date_end": "2026-05-22",
+    "n_months": 77,
+    "winsorize_bounds": [
+      -0.2765,
+      0.4792
+    ]
+  },
+  "universe_total_return_pct": 5021.2,
+  "btc_total_return_pct": null,
+  "factors": {
+    "Momentum (12-1)": {
+      "mean_ic": 0.1112,
+      "ic_t_stat": 3.8,
+      "ic_n_months": 65,
+      "annualized_return_pct": 55.99,
+      "annualized_sharpe": 1.9,
+      "max_drawdown_pct": -10.16,
+      "best_month_pct": 14.35,
+      "worst_month_pct": -25.84
+    },
+    "Low volatility": {
+      "mean_ic": 0.1248,
+      "ic_t_stat": 7.21,
+      "ic_n_months": 75,
+      "annualized_return_pct": 38.48,
+      "annualized_sharpe": 1.12,
+      "max_drawdown_pct": -43.38,
+      "best_month_pct": 36.25,
+      "worst_month_pct": -35.89
+    },
+    "Short-term reversal": {
+      "mean_ic": -0.0603,
+      "ic_t_stat": -1.77,
+      "ic_n_months": 76,
+      "annualized_return_pct": -20.34,
+      "annualized_sharpe": -0.64,
+      "max_drawdown_pct": -52.63,
+      "best_month_pct": 21.02,
+      "worst_month_pct": -16.07
+    }
+  },
+  "vs_sp500": {
+    "Momentum (12-1)": {
+      "sp500_ic": 0.016,
+      "crypto_ic": 0.1112
+    },
+    "Low volatility": {
+      "sp500_ic": -0.02,
+      "crypto_ic": 0.1248
+    },
+    "Short-term reversal": {
+      "sp500_ic": 0.019,
+      "crypto_ic": -0.0603
+    }
+  }
+}

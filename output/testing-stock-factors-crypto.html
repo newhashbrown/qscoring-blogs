@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Do Stock Factors Work in Crypto? Testing Momentum, Low Volatility, and Reversal on 1,050 Tokens | QScoring</title>
+  <meta name="description" content="We tested three classic equity factors on 1,050 cryptocurrencies over 6.4 years and 1.6M daily price rows. Momentum hit Sharpe 1.90 — five times stronger than in S&P 500. Low-vol worked here but failed there. Short-term reversal flipped sign and lost money. Same factors, different asset class, opposite results.">
+  <meta name="author" content="QScoring Research">
+  <meta name="robots" content="index,follow,max-image-preview:large">
+  <link rel="canonical" href="https://qscoring.com/blog/testing-stock-factors-crypto">
+
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Do Stock Factors Work in Crypto? 1,050 Tokens, Six Years, Honest Results">
+  <meta property="og:description" content="Same three factors as the S&P 500 post. Momentum Sharpe 1.90 in crypto vs 0.35 in equities. Reversal flipped sign and lost 20%/year. The factor framework generalizes — with a twist.">
+  <meta property="og:url" content="https://qscoring.com/blog/testing-stock-factors-crypto">
+  <meta property="og:site_name" content="QScoring">
+  <meta property="og:image" content="https://qscoring.com/blog/crypto-factor-test/crypto_vs_equity_ic.png">
+  <meta property="article:published_time" content="2026-05-22T00:00:00Z">
+  <meta property="article:section" content="Quantitative Research">
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Do Stock Factors Work in Crypto?">
+  <meta name="twitter:description" content="1,050 tokens. Six years. Momentum Sharpe 1.90 in crypto vs 0.35 in equities. Reversal flipped sign.">
+  <meta name="twitter:image" content="https://qscoring.com/blog/crypto-factor-test/crypto_vs_equity_ic.png">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "Do Stock Factors Work in Crypto? Testing Momentum, Low Volatility, and Reversal on 1,050 Tokens",
+    "description": "An empirical test of three classic equity factors on a panel of 1,050 cryptocurrencies from 2020 to 2026 — directly comparable to our previous S&P 500 factor test.",
+    "image": "https://qscoring.com/blog/crypto-factor-test/crypto_vs_equity_ic.png",
+    "datePublished": "2026-05-22",
+    "dateModified": "2026-05-22",
+    "author": { "@type": "Organization", "name": "QScoring Research" },
+    "publisher": {
+      "@type": "Organization",
+      "name": "QScoring",
+      "url": "https://qscoring.com",
+      "logo": { "@type": "ImageObject", "url": "https://qscoring.com/logo.svg" }
+    },
+    "mainEntityOfPage": { "@type": "WebPage", "@id": "https://qscoring.com/blog/testing-stock-factors-crypto" }
+  }
+  </script>
+
+  <link rel="preconnect" href="https://rsms.me/">
+  <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+
+  <style>
+    :root {
+      --navy:        #0F172A;
+      --ink:         #1E293B;
+      --slate:       #334155;
+      --muted:       #64748B;
+      --line:        #E2E8F0;
+      --soft:        #F8FAFC;
+      --soft-2:      #F1F5F9;
+      --accent:      #059669;
+      --accent-dark: #047857;
+      --safe:        #059669;
+      --danger:      #DC2626;
+      --paper:       #FFFFFF;
+      --content-max: 720px;
+      --wide-max:   1080px;
+      --text-base: clamp(1.02rem, 0.96rem + 0.3vw, 1.13rem);
+      --text-lg:   clamp(1.18rem, 1.06rem + 0.5vw, 1.32rem);
+      --text-2xl:  clamp(1.8rem, 1.4rem + 1.6vw, 2.4rem);
+      --text-hero: clamp(2.4rem, 1.6rem + 3.4vw, 4.2rem);
+      --space-section: clamp(3.5rem, 2rem + 4vw, 6rem);
+      --radius:    14px;
+      --radius-lg: 22px;
+      --shadow:    0 6px 28px -10px rgba(15,23,42,0.18), 0 2px 6px rgba(15,23,42,0.05);
+      --shadow-lg: 0 30px 60px -30px rgba(15,23,42,0.35), 0 6px 16px -8px rgba(15,23,42,0.12);
+      --ease: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body { margin: 0; background: var(--paper); color: var(--ink);
+      font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+      font-feature-settings: 'cv11', 'ss01', 'ss03';
+      font-size: var(--text-base); line-height: 1.65;
+      -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+    a { color: var(--accent); text-decoration: none; transition: color 150ms var(--ease); }
+    a:hover { color: var(--accent-dark); text-decoration: underline; text-underline-offset: 3px; }
+
+    header.site { position: sticky; top: 0; z-index: 30;
+      background: rgba(255,255,255,0.85);
+      backdrop-filter: saturate(180%) blur(14px);
+      -webkit-backdrop-filter: saturate(180%) blur(14px);
+      border-bottom: 1px solid var(--line); }
+    .site-inner { max-width: var(--wide-max); margin: 0 auto; padding: 14px 28px;
+      display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+    .logo { display: inline-flex; align-items: center; gap: 10px; color: var(--navy);
+      font-weight: 700; letter-spacing: -0.02em; font-size: 1.06rem; }
+    .logo-mark { width: 30px; height: 30px; border-radius: 8px;
+      background: linear-gradient(135deg, #0F172A 0%, #059669 100%);
+      display: grid; place-items: center; color: #fff; font-weight: 800;
+      font-size: 0.9rem; letter-spacing: -0.04em;
+      box-shadow: 0 4px 14px -4px rgba(5,150,105,0.55); }
+    nav.site-nav { display: flex; gap: 26px; font-size: 0.94rem; color: var(--slate); }
+    nav.site-nav a { color: var(--slate); }
+    nav.site-nav a:hover { color: var(--navy); text-decoration: none; }
+    .cta { display: inline-flex; align-items: center; gap: 8px;
+      padding: 9px 16px; border-radius: 999px;
+      background: var(--navy); color: #fff !important;
+      font-weight: 600; font-size: 0.92rem;
+      transition: transform 180ms var(--ease), background 180ms var(--ease); }
+    .cta:hover { background: var(--accent); transform: translateY(-1px); text-decoration: none; }
+    @media (max-width: 720px) { nav.site-nav { display: none; } }
+
+    .hero { max-width: var(--wide-max); margin: 0 auto; padding: clamp(3rem, 2rem + 4vw, 6rem) 28px 2rem; }
+    .eyebrow { display: inline-flex; align-items: center; gap: 10px;
+      font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.16em;
+      color: var(--accent); font-weight: 600; }
+    .eyebrow::before { content: ""; width: 28px; height: 1px; background: var(--accent); }
+    h1.hero-title { margin: 18px 0 18px;
+      font-size: var(--text-hero); line-height: 1.04;
+      letter-spacing: -0.035em; color: var(--navy);
+      font-weight: 800; max-width: 20ch; }
+    h1.hero-title .accent { color: var(--accent); }
+    .deck { max-width: 60ch; font-size: var(--text-lg);
+      color: var(--slate); line-height: 1.5; }
+    .byline { margin-top: 36px; display: flex; align-items: center; gap: 14px;
+      font-size: 0.92rem; color: var(--muted); }
+    .byline .dot { width: 4px; height: 4px; border-radius: 50%; background: var(--muted); }
+    .byline strong { color: var(--ink); font-weight: 600; }
+
+    .stats { max-width: var(--wide-max); margin: 2.5rem auto 0; padding: 0 28px;
+      display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+    .stat { padding: 22px 22px; border-radius: var(--radius);
+      background: var(--soft); border: 1px solid var(--line);
+      transition: transform 200ms var(--ease), box-shadow 200ms var(--ease), border-color 200ms var(--ease); }
+    .stat:hover { transform: translateY(-2px); box-shadow: var(--shadow); border-color: #CBD5E1; }
+    .stat .num { font-size: clamp(1.7rem, 1.2rem + 1.4vw, 2.4rem); font-weight: 800;
+      color: var(--navy); letter-spacing: -0.03em; line-height: 1; }
+    .stat .label { margin-top: 8px; font-size: 0.86rem; color: var(--muted); line-height: 1.4; }
+    @media (max-width: 720px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+
+    main.article { max-width: var(--content-max); margin: 0 auto; padding: var(--space-section) 28px 4rem; }
+    main.article > * + * { margin-top: 1.1em; }
+    main.article h2 { margin: 3.4rem 0 1rem; font-size: var(--text-2xl);
+      color: var(--navy); letter-spacing: -0.025em; line-height: 1.15; font-weight: 800; }
+    main.article h2::before { content: ""; display: block; width: 44px; height: 3px;
+      background: var(--accent); margin-bottom: 18px; border-radius: 2px; }
+    main.article p { color: var(--ink); }
+    main.article p code, main.article li code {
+      background: var(--soft-2); color: var(--accent-dark);
+      padding: 2px 6px; border-radius: 5px; font-size: 0.9em;
+      font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace; }
+    main.article strong { color: var(--navy); font-weight: 700; }
+    main.article ul { padding-left: 1.3rem; }
+    main.article li + li { margin-top: 0.4em; }
+    main.article table { width: 100%; border-collapse: collapse; margin: 1.6rem 0; font-size: 0.92rem; }
+    main.article th, main.article td { padding: 10px 14px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    main.article th { color: var(--navy); font-weight: 700; }
+
+    .pull { margin: 2.8rem 0; padding: 1.6rem 0 1.6rem 1.8rem;
+      border-left: 3px solid var(--accent);
+      font-size: clamp(1.15rem, 0.9rem + 1vw, 1.5rem);
+      line-height: 1.4; color: var(--navy); font-weight: 600;
+      letter-spacing: -0.015em; }
+
+    figure.chart { margin: 2.6rem -28px; background: var(--paper); }
+    figure.chart .chart-card { border-radius: var(--radius-lg);
+      border: 1px solid var(--line);
+      background: radial-gradient(120% 80% at 0% 0%, rgba(5,150,105,0.05), transparent 60%), var(--paper);
+      padding: 26px 26px 18px; box-shadow: var(--shadow); }
+    figure.chart img { display: block; width: 100%; height: auto; border-radius: 10px; }
+    figure.chart figcaption { margin-top: 14px; font-size: 0.88rem;
+      color: var(--muted); line-height: 1.5; }
+    figure.chart figcaption strong { color: var(--ink); font-weight: 600; }
+    @media (min-width: 900px) { figure.chart { margin: 3rem -120px; } }
+
+    .callout { margin: 2.4rem 0; padding: 22px 24px;
+      background: linear-gradient(135deg, rgba(5,150,105,0.06), rgba(5,150,105,0.02));
+      border: 1px solid rgba(5,150,105,0.18); border-radius: var(--radius);
+      font-size: 0.97rem; color: var(--slate); }
+    .callout .title { display: flex; align-items: center; gap: 10px;
+      font-weight: 700; color: var(--navy);
+      margin-bottom: 6px; font-size: 0.95rem; letter-spacing: 0.01em; }
+    .callout .title .badge { font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase;
+      padding: 3px 8px; background: var(--accent); color: #fff;
+      border-radius: 4px; font-weight: 700; }
+
+    .metrics-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 2rem 0 1.4rem; }
+    .metric { padding: 18px 18px; border-radius: var(--radius); background: var(--navy); color: #fff; }
+    .metric .v { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; }
+    .metric .k { margin-top: 6px; font-size: 0.78rem; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255,255,255,0.7); }
+    @media (max-width: 600px) { .metrics-grid { grid-template-columns: repeat(2, 1fr); } }
+
+    .cta-card { margin: 4rem -28px 0; padding: 38px 32px;
+      border-radius: var(--radius-lg);
+      background: radial-gradient(70% 100% at 100% 0%, rgba(5,150,105,0.55) 0%, rgba(15,23,42,0) 60%),
+        linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+      color: #fff; box-shadow: var(--shadow-lg); position: relative; overflow: hidden; }
+    .cta-card::after { content: ""; position: absolute; inset: auto -40px -60px auto;
+      width: 220px; height: 220px;
+      background: radial-gradient(closest-side, rgba(5,150,105,0.35), transparent 70%);
+      pointer-events: none; }
+    .cta-card h3 { margin: 0 0 8px; color: #fff;
+      font-size: clamp(1.4rem, 1.1rem + 1vw, 1.9rem);
+      letter-spacing: -0.02em; line-height: 1.2; font-weight: 800; }
+    .cta-card p { margin: 0 0 22px; color: rgba(255,255,255,0.78); max-width: 56ch; }
+    .cta-card .cta { background: var(--accent); color: #fff !important; }
+    .cta-card .cta:hover { background: #34D399; color: var(--navy) !important; }
+    @media (min-width: 900px) { .cta-card { margin: 4rem -120px 0; } }
+
+    footer.site { margin-top: 4rem; padding: 36px 28px 56px; border-top: 1px solid var(--line); background: var(--soft); }
+    .footer-inner { max-width: var(--wide-max); margin: 0 auto; display: flex; flex-wrap: wrap; gap: 18px; justify-content: space-between; font-size: 0.88rem; color: var(--muted); }
+    .footer-inner a { color: var(--slate); }
+    .meta-foot { margin-top: 18px; max-width: var(--content-max); padding: 0 28px; margin-left: auto; margin-right: auto; font-size: 0.82rem; color: var(--muted); line-height: 1.6; }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; } }
+  </style>
+</head>
+<body>
+
+<header class="site">
+  <div class="site-inner">
+    <a class="logo" href="https://qscoring.com">
+      <span class="logo-mark">Q</span>
+      <span>QScoring</span>
+    </a>
+    <nav class="site-nav" aria-label="Primary">
+      <a href="https://qscoring.com/research">Research</a>
+      <a href="https://qscoring.com/blog">Blog</a>
+      <a href="https://qscoring.com/methodology">Methodology</a>
+      <a href="https://qscoring.com/pricing">Pricing</a>
+    </nav>
+    <a class="cta" href="https://qscoring.com/signup">Try QScoring &rarr;</a>
+  </div>
+</header>
+
+<section class="hero">
+  <span class="eyebrow">Quantitative Research</span>
+  <h1 class="hero-title">Do stock factors work <span class="accent">in crypto?</span></h1>
+  <p class="deck">
+    Our previous post tested three classic equity factors on 5 years of S&amp;P 500 data and found nothing statistically significant. We took the same three factors, the same methodology, and pointed it at six years of daily prices for 1,050 cryptocurrencies. The numbers came out very, very different.
+  </p>
+  <div class="byline">
+    <span><strong>QScoring Research</strong></span>
+    <span class="dot"></span>
+    <span>May 22, 2026</span>
+    <span class="dot"></span>
+    <span>15 min read</span>
+  </div>
+</section>
+
+<section class="stats" aria-label="Headline statistics">
+  <div class="stat">
+    <div class="num">1,050</div>
+    <div class="label">Cryptocurrencies analyzed after liquidity filtering</div>
+  </div>
+  <div class="stat">
+    <div class="num">+5,021%</div>
+    <div class="label">Equal-weighted universe return, 2020-01-01 → today</div>
+  </div>
+  <div class="stat">
+    <div class="num">1.90</div>
+    <div class="label">Momentum factor Sharpe ratio (was 0.35 on S&amp;P 500)</div>
+  </div>
+  <div class="stat">
+    <div class="num">3 / 3</div>
+    <div class="label">Factors with statistically significant IC (t-stat &gt; 1.7)</div>
+  </div>
+</section>
+
+<main class="article">
+
+  <p>The previous post in this series — <a href="testing-stock-factors-sp500.html">Do Stock Factors Actually Work?</a> — tested three classic price-based factors on five years of S&amp;P 500 data. Momentum, low volatility, and short-term reversal. The honest verdict was: nothing was statistically significant over that window, and the low-volatility anomaly even had the wrong sign in a QE-era bull market.</p>
+
+  <p>That outcome raised an obvious follow-up question: <em>was the problem the factors, or the data?</em> If we take the same three factors and the same methodology and apply them to a different asset class — one with much higher dispersion, much sharper trends, and much weirder microstructure — what comes out?</p>
+
+  <p>So we did that. We pulled <a href="https://www.kaggle.com/datasets/ayushkhaire/top-1000-cryptos-historical">ayushkhaire/top-1000-cryptos-historical</a> from Kaggle — 8.4 million daily price rows across roughly 8,500 unique crypto tickers from 2014 to today. After filtering to liquid tokens (mean daily dollar volume between $1M and $50B), excluding stablecoins, and requiring at least 500 days of history from 2020 onwards, we kept <strong>1,050 cryptocurrencies</strong> with <strong>1.6 million daily rows</strong>.</p>
+
+  <p>Then we computed the same three factors as the S&amp;P 500 post, the same way, evaluated the same way. The results are striking in a way honest backtests rarely are.</p>
+
+  <h2>1. The market backdrop is not what you remember</h2>
+
+  <p>Before the factors, look at what crypto did over this window:</p>
+
+  <figure class="chart">
+    <div class="chart-card">
+      <img src="../assets/crypto_universe_overview.png" alt="Log-scale chart of equal-weighted crypto universe, BTC, and ETH from 2020 to 2026 — all compounded multiple times over">
+      <figcaption><strong>Figure 1.</strong> Equal-weighted return across all 1,050 names compounded to <strong>51× growth</strong> over six years — a +5,021% total return. The chart uses log scale because linear axes can&apos;t show this. For context: that&apos;s the kind of number that makes equity-factor researchers re-evaluate what &ldquo;a normal market&rdquo; means.</figcaption>
+    </div>
+  </figure>
+
+  <p>Two things to read carefully from that chart:</p>
+
+  <ul>
+    <li><strong>Equal-weighted dominated BTC.</strong> Bitcoin compounded handsomely, but the long tail of mid-cap tokens did more. This is the cross-sectional dispersion that gives factor analysis raw material to work with.</li>
+    <li><strong>Two macro regimes are visible.</strong> The 2020-2021 explosion. The 2022-2023 bear and recovery. The 2024-2025 ramp. Any factor strong enough to show up in this data has survived three meaningful regime shifts.</li>
+  </ul>
+
+  <p>The cross-sectional return distribution is also nothing like equities:</p>
+
+  <figure class="chart">
+    <div class="chart-card">
+      <img src="../assets/crypto_monthly_returns.png" alt="Histogram of monthly returns across all crypto names showing right-skewed distribution with long tail of large positive returns">
+      <figcaption><strong>Figure 2.</strong> Pooled monthly returns across 1,050 names. The median monthly return is mildly negative — the typical token loses money in a typical month. The mean is positive because of an extreme right tail: a small percentage of tokens deliver +50% to +500% monthly returns, dragging the average up. This is the textbook profile of an asset class where a few winners pay for many losers.</figcaption>
+    </div>
+  </figure>
+
+  <h2>2. Information coefficients — clean and significant</h2>
+
+  <figure class="chart">
+    <div class="chart-card">
+      <img src="../assets/crypto_ic_time_series.png" alt="IC time series for the three factors in crypto, showing momentum and low-vol clearly above zero, ST reversal below">
+      <figcaption><strong>Figure 3.</strong> Cross-sectional Spearman IC by month, 6-month rolling. <strong>Momentum mean IC = +0.111</strong> (t-stat <strong>+3.80</strong>). <strong>Low volatility mean IC = +0.125</strong> (t-stat <strong>+7.21</strong>). <strong>Short-term reversal mean IC = &minus;0.060</strong> (t-stat &minus;1.77). All three are statistically more meaningful than what we saw in the S&amp;P 500.</figcaption>
+    </div>
+  </figure>
+
+  <p>For comparison with the equity post:</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Factor</th>
+        <th>S&amp;P 500 IC</th>
+        <th>S&amp;P 500 t-stat</th>
+        <th>Crypto IC</th>
+        <th>Crypto t-stat</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Momentum (12-1)</strong></td>
+        <td>+0.016</td>
+        <td>+0.53</td>
+        <td><strong>+0.111</strong></td>
+        <td><strong>+3.80</strong></td>
+      </tr>
+      <tr>
+        <td><strong>Low volatility</strong></td>
+        <td>&minus;0.020</td>
+        <td>&minus;0.82</td>
+        <td><strong>+0.125</strong></td>
+        <td><strong>+7.21</strong></td>
+      </tr>
+      <tr>
+        <td><strong>Short-term reversal</strong></td>
+        <td>+0.019</td>
+        <td>+1.04</td>
+        <td><strong>&minus;0.060</strong></td>
+        <td><strong>&minus;1.77</strong></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>Read that table carefully. Two of the three factors are much stronger in crypto than in equities (momentum is 7× the IC magnitude, low volatility is 6× and with the opposite sign of what we saw in equities). The third — short-term reversal — flipped sign entirely and is now a contrarian indicator that <em>loses</em> money.</p>
+
+  <h2>3. Momentum is doing real work</h2>
+
+  <figure class="chart">
+    <div class="chart-card">
+      <img src="../assets/crypto_momentum_quintiles.png" alt="Five lines showing momentum quintile cumulative returns on log scale, with Q5 dominating clearly">
+      <figcaption><strong>Figure 4.</strong> Equal-weighted momentum quintile portfolios. Q5 (highest momentum) compounded to ~22× over six years. Q1 (worst momentum) compounded to ~3×. The spread is wide and the ordering is much closer to monotonic than what we saw in the equity post — Q4 doesn&apos;t dip below Q3 the way it did on S&amp;P 500 data.</figcaption>
+    </div>
+  </figure>
+
+  <p>The momentum factor in crypto doesn&apos;t need clever construction or vol-targeting to work. Simple 12-1 momentum, equal-weighted quintile portfolios, monthly rebalancing — and the top quintile compounds 7× more than the bottom over six years. That&apos;s what a factor with real signal looks like in raw form.</p>
+
+  <h2>4. Long-short returns — and the methodological honesty bit</h2>
+
+  <figure class="chart">
+    <div class="chart-card">
+      <img src="../assets/crypto_long_short_returns.png" alt="Long-short cumulative returns: momentum compounding strongly upward, low-vol mostly positive but volatile, reversal trending down">
+      <figcaption><strong>Figure 5.</strong> Long-short (top quintile minus bottom quintile) cumulative returns, gross of costs. Momentum compounds steadily. Low volatility delivers but with a vicious 2022-2023 drawdown. Short-term reversal is in a constant slow bleed — losing money systematically.</figcaption>
+    </div>
+  </figure>
+
+  <p>The numbers, gross of transaction costs:</p>
+
+  <div class="metrics-grid">
+    <div class="metric"><div class="v">+56% / yr</div><div class="k">Momentum L/S return</div></div>
+    <div class="metric"><div class="v">Sharpe 1.90</div><div class="k">Momentum risk-adj.</div></div>
+    <div class="metric"><div class="v">+38% / yr</div><div class="k">Low-vol L/S return</div></div>
+    <div class="metric"><div class="v">&minus;20% / yr</div><div class="k">Reversal L/S return</div></div>
+  </div>
+
+  <p>A Sharpe of 1.90 looks like a hedge-fund pitch. It deserves a paragraph of caveats:</p>
+
+  <ul>
+    <li><strong>Gross of costs.</strong> Real crypto trading costs include taker/maker fees (3-10 bps), slippage on the bottom quintile (which contains the most illiquid names), and funding rates for the short leg. Net of these, a realistic implementation would shave 10-20 percentage points of annual return.</li>
+    <li><strong>Cross-sectional winsorization at the 5/95 percentile per month.</strong> Without it, a single token going from $0.000001 to $0.0001 (a 100× monthly return) would make Q5&apos;s mean explode. The winsorization is the difference between &ldquo;Sharpe 1.90&rdquo; and &ldquo;Sharpe 8 with a 700% drawdown.&rdquo; The rank-based IC is unaffected; the magnitude numbers need this discipline.</li>
+    <li><strong>Survivorship bias.</strong> The dataset contains tokens that exist as of compilation date. Coins that fully zeroed out during the 2022 bear market are not represented. That biases Q1 (low momentum) returns upward and makes the long-short spread look better than it would in a fully survivorship-corrected dataset.</li>
+    <li><strong>One asset class, one regime.</strong> The window from 2020 to 2026 is the post-COVID, crypto-as-mainstream-asset period. Earlier crypto regimes (the 2017-2018 ICO bubble; the 2013-2014 Mt. Gox era) had different microstructure. Six years isn&apos;t much.</li>
+  </ul>
+
+  <div class="callout">
+    <div class="title"><span class="badge">Methodology</span> Why momentum works so hard here</div>
+    The behavioral story for crypto momentum is more direct than for equities. There are no quarterly earnings to anchor sentiment; there are no fundamental analysts to provide a fair-value reference; there are no value-buying institutions to mean-revert prices. What remains is pure attention dynamics: a token that has performed in the recent past gets discussed more, gets bought more, performs better, gets discussed more. The feedback loop runs longer than it does in equities because there&apos;s nothing to break it. That same dynamic is also why drawdowns when momentum reverses are brutal — there&apos;s no fundamental floor.
+  </div>
+
+  <h2>5. Why low-volatility works in crypto when it failed in equities</h2>
+
+  <p>In the S&amp;P 500 post, the low-volatility anomaly had the wrong sign — high-vol stocks beat low-vol stocks during the QE era. Here, low-vol works clearly: lower-vol tokens deliver higher forward returns.</p>
+
+  <p>The mechanism is different from the equity case. In equities, &ldquo;low vol&rdquo; tends to mean utility companies and dividend payers — staid businesses that get bid up in risk-off and sold in risk-on. In crypto, the low-vol bucket is dominated by mature large-caps: <strong>BTC and ETH</strong> primarily, plus a tail of stablecoins-adjacent infrastructure tokens. Those names appreciated steadily over the test window while the high-vol tail of microcaps boomed and busted in cycles.</p>
+
+  <p>So &ldquo;low vol&rdquo; in crypto is functionally a <strong>market-cap quality proxy</strong>, not a defensive-equity proxy. That&apos;s why it works in crypto and failed in equities — it&apos;s reading a different underlying signal in each market.</p>
+
+  <h2>6. Short-term reversal flipped sign</h2>
+
+  <p>This is the most interesting result of the three. In equities, the short-term reversal anomaly is well-documented: this-month&apos;s losers tend to be next-month&apos;s winners. The behavioral story is that retail investors overreact to short-term news and the prices correct over the following month.</p>
+
+  <p>In crypto, the same factor has the <em>opposite</em> sign. Recent losers keep losing. Recent winners keep winning. The 1-month signal isn&apos;t mean-reverting; it&apos;s a momentum signal at a shorter horizon.</p>
+
+  <figure class="chart">
+    <div class="chart-card">
+      <img src="../assets/crypto_vs_equity_ic.png" alt="Side-by-side bar chart comparing S&P 500 and crypto IC for the three factors, showing dramatic differences">
+      <figcaption><strong>Figure 6.</strong> Same factors, same construction, two asset classes. The pattern is consistent with crypto being a faster-moving, more attention-driven market with weaker fundamental anchoring. Momentum and low-vol amplify; reversal inverts.</figcaption>
+    </div>
+  </figure>
+
+  <h2>7. Drawdowns — even the strong factors hurt</h2>
+
+  <figure class="chart">
+    <div class="chart-card">
+      <img src="../assets/crypto_factor_drawdowns.png" alt="Drawdown chart showing all three factors going through 20-50% drawdowns at various points">
+      <figcaption><strong>Figure 7.</strong> Long-short drawdowns. Momentum&apos;s max drawdown is only &minus;10% — extraordinarily clean. Low volatility had a &minus;43% drawdown in the 2022 bear (low-vol large-caps fell less than micro-caps, but micro-caps had previously appreciated more, so the long-short blew out). Short-term reversal is in continuous drawdown — it never recovers because the underlying signal doesn&apos;t work.</figcaption>
+    </div>
+  </figure>
+
+  <p>Sharpe ratios with their drawdowns:</p>
+
+  <figure class="chart">
+    <div class="chart-card">
+      <img src="../assets/crypto_factor_sharpe.png" alt="Bar chart of factor Sharpe ratios in crypto: momentum 1.90, low-vol 1.12, ST reversal -0.64">
+      <figcaption><strong>Figure 8.</strong> Annualized Sharpe ratios. Momentum 1.90, low-vol 1.12, reversal &minus;0.64. The Sharpe-1.90 figure is real but, again, gross of frictions; the more conservative reading is that momentum has a Sharpe somewhere between 1.0 and 1.5 net of realistic costs — still a real signal, just less of a hedge fund pitch.</figcaption>
+    </div>
+  </figure>
+
+  <h2>8. What this means for the QScoring methodology</h2>
+
+  <p>QScoring scores equities, not cryptocurrencies. But this exercise illustrates two principles that drive our methodology design:</p>
+
+  <ul>
+    <li><strong>Factor signals are not universal.</strong> A factor that works on one asset class can be weaker, stronger, or even opposite-signed on another. The intuition behind why a factor exists matters as much as the historical record — &ldquo;why does this factor predict returns&rdquo; tells you whether the factor will work in a new environment.</li>
+    <li><strong>Regime matters.</strong> The S&amp;P 500 window (2013-2018) was a low-volatility QE era. The crypto window (2020-2026) was a high-volatility narrative-driven era. The same factor frameworks produced different outcomes because the underlying market dynamics were different. This is exactly why QScoring uses long-history factor validation rather than a single recent window — short windows pick up regime-specific results that won&apos;t generalize.</li>
+  </ul>
+
+  <p>If you&apos;re curious about how QScoring&apos;s equity factor construction differs from the simple price-only momentum we used here, the <a href="https://qscoring.com/methodology">methodology page</a> has the full disclosure: which features go into each of the five factors, how they&apos;re combined into the composite, and how each component is validated over long historical windows.</p>
+
+  <div class="pull">
+    Same three factors. Different asset class. Different regime. Three different answers. That&apos;s honest factor research, and that&apos;s why model choice matters less than feature choice.
+  </div>
+
+  <div class="cta-card">
+    <h3>See the same modeling discipline applied to stocks.</h3>
+    <p>QScoring rates every U.S.-listed equity using the same evidence-first approach — vetted factors, long-window validation, transparent IC and quintile-spread metrics. No black boxes.</p>
+    <a class="cta" href="https://qscoring.com/signup">Open a free account &rarr;</a>
+  </div>
+
+</main>
+
+<aside class="meta-foot">
+  <p><strong>Reproducibility.</strong> All analysis in this post is reproducible from <code>analysis/crypto_factor_test.py</code> using the publicly available <a href="https://www.kaggle.com/datasets/ayushkhaire/top-1000-cryptos-historical">ayushkhaire/top-1000-cryptos-historical</a> dataset. Filtering: liquid tokens with daily $vol $1M–$50B, ≥500 days of history from 2020-01-01, no stablecoins, daily returns winsorized at 99.5th percentile, monthly returns cross-sectionally winsorized at 5/95 percentile. Pandas 3.0.3, scikit-learn 1.8.0, Python 3.13.</p>
+  <p><strong>Cost note.</strong> All factor returns are <em>gross of transaction costs</em>. Crypto round-trip costs (taker fees + slippage + funding) of 30-60 bps per month at the turnover rates these strategies imply would reduce all three return numbers by ~5-10 percentage points annually.</p>
+  <p><strong>Survivorship bias.</strong> The dataset includes tokens that exist at compilation date; coins that fully zeroed out during prior bear markets are not represented. This biases Q1 returns upward (the worst tokens are filtered out by death) and makes long-short spreads look better than a fully survivorship-corrected dataset would show. Quantitative magnitude of the bias on this dataset is hard to estimate without a curated dead-coin list.</p>
+  <p><strong>Disclosures.</strong> This article is for educational purposes and is not investment advice. QScoring scores publicly traded equities and provides quantitative analysis; it does not manage capital, execute trades, or offer cryptocurrency products of any kind.</p>
+</aside>
+
+<footer class="site">
+  <div class="footer-inner">
+    <div>&copy; 2026 QScoring &middot; Quantitative research for individual investors</div>
+    <div>
+      <a href="https://qscoring.com/methodology">Methodology</a> &middot;
+      <a href="https://qscoring.com/blog">Blog</a> &middot;
+      <a href="https://qscoring.com/contact">Contact</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -51,3 +51,4 @@ Outputs:
 | `predicting-loan-defaults`                   | `hemanthsai7/loandefault`            | `loan_default_prediction.py`          |
 | `detecting-credit-card-fraud`                | `mlg-ulb/creditcardfraud`            | `credit_card_fraud_detection.py`      |
 | `testing-stock-factors-sp500`                | `camnugent/sandp500`                 | `sp500_factor_test.py`                |
+| `testing-stock-factors-crypto`               | `ayushkhaire/top-1000-cryptos-historical` | `crypto_factor_test.py`          |
